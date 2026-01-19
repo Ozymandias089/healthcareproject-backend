@@ -4,6 +4,7 @@ import com.hcproj.healthcareprojectbackend.auth.dto.request.EmailCheckRequestDTO
 import com.hcproj.healthcareprojectbackend.auth.dto.request.LoginRequestDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.request.SignupRequestDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.request.TokenReissueRequestDTO;
+import com.hcproj.healthcareprojectbackend.auth.dto.response.EmailCheckResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.TokenResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
@@ -63,10 +64,11 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public void checkEmailDuplicate(EmailCheckRequestDTO request) {
+    public EmailCheckResponseDTO checkEmailDuplicate(EmailCheckRequestDTO request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
         }
+        return new EmailCheckResponseDTO(true);
     }
 
     @Transactional(readOnly = true)

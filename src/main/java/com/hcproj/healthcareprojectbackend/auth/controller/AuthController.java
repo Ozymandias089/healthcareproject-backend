@@ -4,6 +4,7 @@ import com.hcproj.healthcareprojectbackend.auth.dto.request.EmailCheckRequestDTO
 import com.hcproj.healthcareprojectbackend.auth.dto.request.LoginRequestDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.request.SignupRequestDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.request.TokenReissueRequestDTO;
+import com.hcproj.healthcareprojectbackend.auth.dto.response.EmailCheckResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.TokenResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.service.AuthService;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
@@ -24,10 +25,10 @@ public class AuthController {
     }
 
     // 이메일 중복 체크
-    @PostMapping("/email/check")
-    public ApiResponse<Void> checkEmail(@Valid @RequestBody EmailCheckRequestDTO request) {
-        authService.checkEmailDuplicate(request);
-        return ApiResponse.ok();
+    @GetMapping("/email/check")
+    public ApiResponse<EmailCheckResponseDTO> checkEmail(@Valid @RequestBody EmailCheckRequestDTO request) {
+        EmailCheckResponseDTO responseDTO = authService.checkEmailDuplicate(request);
+        return ApiResponse.ok(responseDTO);
     }
 
     // 로그인
