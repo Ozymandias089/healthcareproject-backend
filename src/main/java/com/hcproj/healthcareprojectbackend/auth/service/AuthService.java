@@ -43,6 +43,7 @@ public class AuthService {
                 .handle(handle)
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
+                .phoneNumber(request.phoneNumber())
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .profileImageUrl(request.profileImageUrl())
