@@ -9,6 +9,7 @@ import com.hcproj.healthcareprojectbackend.global.security.jwt.JwtTokenProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -103,6 +104,10 @@ public class SecurityConfig {
 
                         // 인증/회원 관련 API는 인증 없이 접근 가능
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        // 헬스체크, 버전
+                        .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/version").permitAll()
 
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
