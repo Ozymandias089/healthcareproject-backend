@@ -51,13 +51,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 개발 편의
                         .requestMatchers("/h2-console/**").permitAll()
-                        // swagger (추가했을 때)
+                        // swagger
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        // auth는 열어둠
+                        // auth
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        // [중요] anyRequest() 보다 반드시 위에 있어야 합니다!
+                        .requestMatchers("/images/**").permitAll()
+
+                        // [마지막] 나머지 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
-                .headers(h -> h.frameOptions(f -> f.disable())); // H2 console iframe
+                .headers(h -> h.frameOptions(f -> f.disable()));
 
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

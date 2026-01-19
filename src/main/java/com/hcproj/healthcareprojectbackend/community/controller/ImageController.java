@@ -1,8 +1,8 @@
 // 파일명: ImageController.java
-package com.hcproj.healthcareprojectbackend.image.controller;
+package com.hcproj.healthcareprojectbackend.community.controller;
 
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
-import com.hcproj.healthcareprojectbackend.image.service.ImageService;
+import com.hcproj.healthcareprojectbackend.community.service.ImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

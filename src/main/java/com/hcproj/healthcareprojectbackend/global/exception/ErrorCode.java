@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     // Common
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "COMMON-001", "요청값이 올바르지 않습니다."),
+    INVALID_INPUT(HttpStatus.BAD_REQUEST, "COMMON-002", "입력값이 유효하지 않습니다."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON-404", "대상을 찾을 수 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-500", "서버 오류가 발생했습니다."),
 
@@ -15,7 +16,12 @@ public enum ErrorCode {
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-004", "토큰이 만료되었습니다."),
     LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "AUTH-005", "이메일 또는 비밀번호가 올바르지 않습니다."),
     EMAIL_DUPLICATED(HttpStatus.CONFLICT, "AUTH-006", "이미 사용 중인 이메일입니다."),
-    HANDLE_DUPLICATED(HttpStatus.CONFLICT, "AUTH-007", "이미 사용 중인 핸들입니다.");
+    HANDLE_DUPLICATED(HttpStatus.CONFLICT, "AUTH-007", "이미 사용 중인 핸들입니다."),
+    // User [추가]
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-001", "사용자를 찾을 수 없습니다."),
+    // Community (Post/Comment) [추가]
+    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMUNITY-001", "게시글을 찾을 수 없습니다."),
+    NOT_POST_AUTHOR(HttpStatus.FORBIDDEN, "COMMUNITY-002", "게시글 수정/삭제 권한이 없습니다."); // 세미콜론(;)
 
     private final HttpStatus status;
     private final String code;
