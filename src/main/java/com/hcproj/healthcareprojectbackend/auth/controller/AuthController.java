@@ -1,9 +1,6 @@
 package com.hcproj.healthcareprojectbackend.auth.controller;
 
-import com.hcproj.healthcareprojectbackend.auth.dto.request.EmailCheckRequestDTO;
-import com.hcproj.healthcareprojectbackend.auth.dto.request.LoginRequestDTO;
-import com.hcproj.healthcareprojectbackend.auth.dto.request.SignupRequestDTO;
-import com.hcproj.healthcareprojectbackend.auth.dto.request.TokenReissueRequestDTO;
+import com.hcproj.healthcareprojectbackend.auth.dto.request.*;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.EmailCheckResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.TokenResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.service.AuthService;
@@ -43,10 +40,10 @@ public class AuthController {
         return ApiResponse.ok(authService.reissue(request));
     }
 
-    // 로그아웃 (MVP: refreshToken 무효화 전략은 팀 합의 필요)
+    // 로그아웃
     @PostMapping("/logout")
-    public ApiResponse<Void> logout(@RequestHeader(name = "Authorization", required = false) String authorization) {
-        authService.logout(authorization);
+    public ApiResponse<Void> logout(@Valid @RequestBody LogoutRequestDTO request) {
+        authService.logout(request);
         return ApiResponse.ok();
     }
 

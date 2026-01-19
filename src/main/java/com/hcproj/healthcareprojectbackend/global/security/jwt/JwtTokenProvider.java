@@ -28,25 +28,36 @@ public class JwtTokenProvider {
     }
 
     public String createAccessToken(Long userId, String handle, String role) {
-        return createToken(userId, handle, role, props.accessTokenValiditySeconds());
+        return createToken(userId, handle, role, props.accessTokenValiditySeconds(), null);
     }
 
-    public String createRefreshToken(Long userId, String handle, String role) {
-        return createToken(userId, handle, role, props.refreshTokenValiditySeconds());
+    public String createRefreshToken(Long userId, String handle, String role, String jti) {
+        return createToken(userId, handle, role, props.refreshTokenValiditySeconds(), jti);
     }
 
-    private String createToken(Long userId, String handle, String role, long validitySeconds) {
+    private String createToken(Long userId, String handle, String role, long validitySeconds, String jti) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(validitySeconds);
 
-        return Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .subject(handle)
                 .claim("uid", userId)
-                .claim("role", role) // 예: USER/TRAINER/ADMIN
+                .claim("role", role)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
-                .signWith(key)
-                .compact();
+                .signWith(key);
+
+        if (jti != null) {
+            builder.id(jti); // ✅ 표준 클레임 jti
+        }
+
+        return builder.compact();
+    }
+
+    /** refreshToken에서 jti/uid 뽑을 때 편하게 */
+    public Claims parseClaims(String token) {
+        return Jwts.parser().verifyWith(key).build()
+                .parseSignedClaims(token).getPayload();
     }
 
     public boolean validate(String token) {
