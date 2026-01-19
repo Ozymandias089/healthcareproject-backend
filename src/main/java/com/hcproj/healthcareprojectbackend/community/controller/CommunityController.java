@@ -6,6 +6,8 @@ import com.hcproj.healthcareprojectbackend.community.dto.response.PostDeleteResp
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostListResponse;
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostResponseDTO;
 import com.hcproj.healthcareprojectbackend.community.service.CommunityService;
+// ▼ [수정됨] 경로를 global.security.annotation 으로 변경!
+import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +31,7 @@ public class CommunityController {
         return ApiResponse.ok(communityService.getPostList(category, searchBy, q, cursorId, size));
     }
 
-    // 2. 게시글 상세 조회 (새로 추가됨!)
+    // 2. 게시글 상세 조회
     @GetMapping("/posts/{postId}")
     public ApiResponse<PostResponseDTO> getPostDetail(
             @PathVariable("postId") Long postId
@@ -40,29 +42,28 @@ public class CommunityController {
     // 3. 게시글 작성
     @PostMapping("/posts")
     public ApiResponse<PostResponseDTO> createPost(
+            @CurrentUserId Long userId,
             @RequestBody PostCreateRequestDTO request
     ) {
-        // [임시] 로그인 기능 미구현 -> 1번 유저로 고정
-        Long userId = 1L;
         return ApiResponse.ok(communityService.createPost(userId, request));
     }
 
-    // 4. 게시글 수정 (PATCH 적용 완료! ✅)
+    // 4. 게시글 수정
     @PatchMapping("/posts/{postId}")
     public ApiResponse<PostResponseDTO> updatePost(
+            @CurrentUserId Long userId,
             @PathVariable("postId") Long postId,
             @RequestBody PostUpdateRequestDTO request
     ) {
-        Long userId = 1L; // [임시] 1번 유저
         return ApiResponse.ok(communityService.updatePost(userId, postId, request));
     }
 
     // 5. 게시글 삭제
     @DeleteMapping("/posts/{postId}")
     public ApiResponse<PostDeleteResponseDTO> deletePost(
+            @CurrentUserId Long userId,
             @PathVariable("postId") Long postId
     ) {
-        Long userId = 1L; // [임시] 1번 유저
         return ApiResponse.ok(communityService.deletePost(userId, postId));
     }
 }
