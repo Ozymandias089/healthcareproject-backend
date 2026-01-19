@@ -48,5 +48,6 @@ public class UserEntity extends BaseTimeEntity {
 
     public void withdraw() {
         this.status = UserStatus.WITHDRAWN;
+        markDeleted();
     }
 }

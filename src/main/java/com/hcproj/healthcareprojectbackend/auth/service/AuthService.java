@@ -12,6 +12,7 @@ import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.global.security.jwt.JwtProperties;
 import com.hcproj.healthcareprojectbackend.global.security.jwt.JwtTokenProvider;
 import com.hcproj.healthcareprojectbackend.global.security.jwt.RefreshTokenStore;
+import com.hcproj.healthcareprojectbackend.global.security.jwt.TokenVersionStore;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -52,6 +53,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtProperties jwtProperties;
     private final RefreshTokenStore refreshTokenStore;
+    private final TokenVersionStore tokenVersionStore;
 
     /**
      * 일반 회원가입.
@@ -121,7 +123,7 @@ public class AuthService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
         if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BusinessException(ErrorCode.LOGIN_FAILED);
+            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
         }
 
         return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
@@ -156,9 +158,20 @@ public class AuthService {
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
 
+        // 2) tokenVersion 확인
+        Object verObj = claims.get("version");
+        if (!(verObj instanceof Number vn)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+        int tokenVer = vn.intValue();
+
+        int currentVer = tokenVersionStore.getOrInit(userId);
+        if (tokenVer != currentVer) {
+            // 전부 무효화(탈퇴/전체로그아웃)가 발생한 토큰
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
         // 4) 회전(Rotation): 기존 refresh 무효화
-        //    - 여기서 delete를 먼저 하는 이유:
-        //      재발급 응답 전 탈취자가 같은 refresh를 재사용하는 것을 방지(재사용 공격 감소)
         refreshTokenStore.delete(userId, oldJti);
 
         // 5) 새 토큰 발급 + 새 refresh 저장
@@ -212,9 +225,10 @@ public class AuthService {
         // Access Token: 서버 저장 X (짧은 만료)
         String at = jwtTokenProvider.createAccessToken(userId, handle, role);
 
+        int version = tokenVersionStore.getOrInit(userId);
         // Refresh Token: jti 생성 후 토큰에 포함, Redis에 저장(whitelist)
         String rJti = UUID.randomUUID().toString();
-        String rt =  jwtTokenProvider.createRefreshToken(userId, handle, role, rJti);
+        String rt =  jwtTokenProvider.createRefreshToken(userId, handle, role, rJti, version);
 
         // Refresh TTL은 토큰 exp와 동일하게 가져간다(만료 후 자동 삭제)
         refreshTokenStore.save(userId, rJti, jwtProperties.refreshTokenValiditySeconds());

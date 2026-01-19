@@ -77,4 +77,21 @@ public abstract class BaseTimeEntity {
      */
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    /**
+     * 엔티티를 논리적으로 삭제 처리한다.
+     *
+     * <p>실제 DELETE 쿼리 대신 deletedAt에 현재 시각을 기록한다.</p>
+     * <p>하위 엔티티에서 도메인 로직의 일부로만 호출하도록 protected로 제한한다.</p>
+     */
+    protected void markDeleted() {
+        this.deletedAt = Instant.now();
+    }
+
+    /**
+     * 논리적으로 삭제된 엔 дополн 여부.
+     */
+    public boolean isDeleted() {
+        return this.deletedAt != null;
+    }
 }

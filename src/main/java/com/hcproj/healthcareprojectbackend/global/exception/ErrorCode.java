@@ -61,7 +61,13 @@ public enum ErrorCode {
     EMAIL_DUPLICATED(HttpStatus.CONFLICT, "AUTH-006", "이미 사용 중인 이메일입니다."),
 
     /** 핸들 중복(현재는 handle이 임시 생성이라 실제로는 거의 발생하지 않음) */
-    HANDLE_DUPLICATED(HttpStatus.CONFLICT, "AUTH-007", "이미 사용 중인 핸들입니다.");
+    HANDLE_DUPLICATED(HttpStatus.CONFLICT, "AUTH-007", "이미 사용 중인 핸들입니다."),
+
+    /** 이미 탈퇴된 회원 */
+    ALREADY_WITHDRAWN(HttpStatus.CONFLICT, "AUTH-008", "이미 탈퇴된 회원입니다."),
+
+    /** 비밀번호가 일치하지 않음*/
+    INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "AUTH-009", "비밀번호가 일치하지 않습니다.");
 
     private final HttpStatus status;
     private final String code;

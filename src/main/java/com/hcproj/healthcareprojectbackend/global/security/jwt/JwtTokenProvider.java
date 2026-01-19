@@ -66,7 +66,7 @@ public class JwtTokenProvider {
      * <p>Access Token은 Redis 저장/블랙리스트 대상이 아니므로 jti를 넣지 않는다.</p>
      */
     public String createAccessToken(Long userId, String handle, String role) {
-        return createToken(userId, handle, role, props.accessTokenValiditySeconds(), null);
+        return createToken(userId, handle, role, props.accessTokenValiditySeconds(), null, null);
     }
 
     /**
@@ -77,8 +77,8 @@ public class JwtTokenProvider {
      *
      * @param jti refresh token 식별자(UUID 등)
      */
-    public String createRefreshToken(Long userId, String handle, String role, String jti) {
-        return createToken(userId, handle, role, props.refreshTokenValiditySeconds(), jti);
+    public String createRefreshToken(Long userId, String handle, String role, String jti, Integer version) {
+        return createToken(userId, handle, role, props.refreshTokenValiditySeconds(), jti, version);
     }
 
     /**
@@ -87,7 +87,7 @@ public class JwtTokenProvider {
      * @param validitySeconds 만료(초)
      * @param jti null이면 jti를 포함하지 않는다(=Access Token)
      */
-    private String createToken(Long userId, String handle, String role, long validitySeconds, String jti) {
+    private String createToken(Long userId, String handle, String role, long validitySeconds, String jti, Integer version) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(validitySeconds);
 
@@ -102,9 +102,8 @@ public class JwtTokenProvider {
                 .signWith(key);
 
         // Refresh Token에만 jti를 포함하여 Redis whitelist key로 사용한다.
-        if (jti != null) {
-            builder.id(jti); // 표준 클레임 jti
-        }
+        if (jti != null) builder.id(jti);
+        if (version != null) builder.claim("version", version);
 
         return builder.compact();
     }
