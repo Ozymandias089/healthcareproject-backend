@@ -56,9 +56,6 @@ public class SecurityConfig {
                         // auth
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // [중요] anyRequest() 보다 반드시 위에 있어야 합니다!
-                        .requestMatchers("/images/**").permitAll()
-
                         // [마지막] 나머지 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )

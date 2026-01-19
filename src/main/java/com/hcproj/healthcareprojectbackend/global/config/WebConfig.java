@@ -19,10 +19,4 @@ public class WebConfig implements WebMvcConfigurer {
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(currentUserArgumentResolver);
     }
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // "/images/**" URL로 들어오는 요청을 프로젝트 루트의 "uploads" 폴더로 매핑
-        registry.addResourceHandler("/images/**")
-                .addResourceLocations("file:" + System.getProperty("user.dir") + "/uploads/");
-    }
 }
