@@ -2,19 +2,65 @@ package com.hcproj.healthcareprojectbackend.global.exception;
 
 import org.springframework.http.HttpStatus;
 
+/**
+ * 프로젝트 공통 에러 코드 정의.
+ *
+ * <p><b>역할</b></p>
+ * <ul>
+ *   <li>HTTP Status(상태 코드)와 내부 에러 코드(code), 사용자 메시지(message)를 한 곳에서 통제한다.</li>
+ *   <li>{@link com.hcproj.healthcareprojectbackend.global.exception.BusinessException}은 ErrorCode를 들고 다닌다.</li>
+ *   <li>{@link com.hcproj.healthcareprojectbackend.global.exception.GlobalExceptionHandler}에서 ApiResponse.fail로 변환한다.</li>
+ * </ul>
+ *
+ * <p><b>에러 코드 규칙</b></p>
+ * <ul>
+ *   <li>COMMON-xxx: 인증/도메인과 무관한 공통 오류</li>
+ *   <li>AUTH-xxx: 인증/인가/토큰 등 Security 관련 오류</li>
+ * </ul>
+ *
+ * <p><b>주의</b></p>
+ * <ul>
+ *   <li>클라이언트는 message보다 code를 기준으로 분기하는 것이 안전하다(다국어/문구 변경 대비).</li>
+ * </ul>
+ */
 public enum ErrorCode {
+
+    // -------------------------
     // Common
+    // -------------------------
+
+    /** 요청 값 검증 실패(Validation) / 잘못된 파라미터 등 */
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "COMMON-001", "요청값이 올바르지 않습니다."),
+
+    /** 리소스가 존재하지 않을 때 */
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON-404", "대상을 찾을 수 없습니다."),
+
+    /** 처리되지 않은 예외 등 서버 내부 오류 */
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-500", "서버 오류가 발생했습니다."),
 
+    // -------------------------
     // Auth/Security
+    // -------------------------
+
+    /** 인증 필요(로그인 필요) - 토큰이 없거나 SecurityContext가 비어있음 */
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "AUTH-001", "인증이 필요합니다."),
+
+    /** 권한 부족 - 인증은 됐지만 ROLE이 부족함 */
     FORBIDDEN(HttpStatus.FORBIDDEN, "AUTH-002", "권한이 없습니다."),
+
+    /** 토큰이 유효하지 않음(위변조/형식 오류/폐기됨/Redis whitelist 미존재 등) */
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-003", "토큰이 유효하지 않습니다."),
+
+    /** 토큰 만료(Access/Refresh 모두 공통으로 사용) */
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-004", "토큰이 만료되었습니다."),
+
+    /** 로그인 실패(보안상 계정 존재 여부를 숨기기 위해 단일 메시지로 통일) */
     LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "AUTH-005", "이메일 또는 비밀번호가 올바르지 않습니다."),
+
+    /** 이메일 중복 */
     EMAIL_DUPLICATED(HttpStatus.CONFLICT, "AUTH-006", "이미 사용 중인 이메일입니다."),
+
+    /** 핸들 중복(현재는 handle이 임시 생성이라 실제로는 거의 발생하지 않음) */
     HANDLE_DUPLICATED(HttpStatus.CONFLICT, "AUTH-007", "이미 사용 중인 핸들입니다.");
 
     private final HttpStatus status;
@@ -27,7 +73,12 @@ public enum ErrorCode {
         this.message = message;
     }
 
+    /** HTTP Status (ResponseEntity / Filter 응답에서 사용) */
     public HttpStatus status() { return status; }
+
+    /** 클라이언트 분기용 내부 에러 코드 */
     public String code() { return code; }
+
+    /** 사용자에게 보여줄 메시지 */
     public String message() { return message; }
 }
