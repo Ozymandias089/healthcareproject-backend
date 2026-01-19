@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/me/password")
+@RequestMapping("/api/me")
 public class MePasswordController {
 
     private final MeService meService;
@@ -23,7 +23,7 @@ public class MePasswordController {
      * 비밀번호 변경(로그인 상태)
      * PATCH /api/me/password
      */
-    @PatchMapping
+    @PatchMapping(path = "/password", consumes = "application/json", produces = "application/json")
     public ApiResponse<MessageResponseDTO> changePassword(
             @CurrentUserId Long userId,
             @Valid @RequestBody PasswordChangeRequestDTO request
