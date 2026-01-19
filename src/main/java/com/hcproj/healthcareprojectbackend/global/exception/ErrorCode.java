@@ -66,7 +66,11 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-001", "사용자를 찾을 수 없습니다."),
     // Community (Post/Comment) [추가]
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMUNITY-001", "게시글을 찾을 수 없습니다."),
-    NOT_POST_AUTHOR(HttpStatus.FORBIDDEN, "COMMUNITY-002", "게시글 수정/삭제 권한이 없습니다."), // 세미콜론(;)
+    NOT_POST_AUTHOR(HttpStatus.FORBIDDEN, "COMMUNITY-002", "게시글 수정/삭제 권한이 없습니다."),
+
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "C001", "댓글을 찾을 수 없습니다."),
+    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "G001", "잘못된 입력값입니다."),
+    NOT_COMMENT_AUTHOR(HttpStatus.FORBIDDEN, "C002", "댓글 작성자만 수정/삭제할 수 있습니다."),
 
     /** 이미 탈퇴된 회원 */
     ALREADY_WITHDRAWN(HttpStatus.CONFLICT, "AUTH-008", "이미 탈퇴된 회원입니다."),

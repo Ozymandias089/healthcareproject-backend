@@ -46,4 +46,8 @@ public class CommentEntity extends BaseTimeEntity {
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private CommentStatus status;
+
+    public void update(String content) {
+        this.content = content;
+    }
 }
