@@ -51,18 +51,7 @@ public class AuthService {
                 .build();
 
         UserEntity saved = userRepository.save(user);
-
-        String access = jwtTokenProvider.createAccessToken(saved.getId(), saved.getHandle(), saved.getRole().name());
-        String refreshJti = UUID.randomUUID().toString();
-        String refresh = jwtTokenProvider.createRefreshToken(saved.getId(), saved.getHandle(), saved.getRole().name(), refreshJti);
-        refreshTokenStore.save(saved.getId(), refreshJti, jwtProperties.refreshTokenValiditySeconds());
-
-        return TokenResponseDTO.builder()
-                .accessToken(access)
-                .refreshToken(refresh)
-                .tokenType("Bearer")
-                .expiresIn(jwtProperties.accessTokenValiditySeconds())
-                .build();
+        return issueTokens(saved.getId(), saved.getHandle(), saved.getRole().name());
     }
 
     @Transactional(readOnly = true)
@@ -82,73 +71,74 @@ public class AuthService {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
-        String access = jwtTokenProvider.createAccessToken(user.getId(), user.getHandle(), user.getRole().name());
-        String refreshJti = UUID.randomUUID().toString();
-        String refresh = jwtTokenProvider.createRefreshToken(user.getId(), user.getHandle(), user.getRole().name(), refreshJti);
-        refreshTokenStore.save(user.getId(), refreshJti, jwtProperties.refreshTokenValiditySeconds());
-
-        return TokenResponseDTO.builder()
-                .accessToken(access)
-                .refreshToken(refresh)
-                .tokenType("Bearer")
-                .expiresIn(jwtProperties.accessTokenValiditySeconds())
-                .build();
+        return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
     }
 
     @Transactional
     public TokenResponseDTO reissue(TokenReissueRequestDTO request) {
-        String oldRefresh = request.refreshToken();
+        Claims claims = parseRefreshClaimsOrThrow(request.refreshToken());
 
-        jwtTokenProvider.validate(oldRefresh);
-        Claims claims = jwtTokenProvider.parseClaims(oldRefresh);
-
-        Object uidObj = claims.get("uid");
-        if (!(uidObj instanceof Number n)) throw new BusinessException(ErrorCode.INVALID_TOKEN);
-        long userId = n.longValue();
-
+        long userId = extractUserIdOrThrow(claims);
         String handle = claims.getSubject();
         String role = String.valueOf(claims.get("role"));
+        String oldJti = extractJtiOrThrow(claims);
 
-        String oldJti = claims.getId();
-        if (oldJti == null || oldJti.isBlank()) throw new BusinessException(ErrorCode.INVALID_TOKEN);
-
-        // ✅ Redis에 존재해야만 재발급 가능
+        // whitelist 확인
         if (!refreshTokenStore.exists(userId, oldJti)) {
-            throw new BusinessException(ErrorCode.INVALID_TOKEN); // 또는 REVOKED_TOKEN 같은 코드
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
 
-        // ✅ 회전: 기존 refresh 무효화
+        // 회전: 기존 refresh 무효화
         refreshTokenStore.delete(userId, oldJti);
 
-        // ✅ 새 토큰 발급 + 새 refresh 저장
-        String newAccess = jwtTokenProvider.createAccessToken(userId, handle, role);
+        // 새 토큰 발급 + 저장
+        return issueTokens(userId, handle, role);
+    }
 
-        String newJti = UUID.randomUUID().toString();
-        String newRefresh = jwtTokenProvider.createRefreshToken(userId, handle, role, newJti);
-        refreshTokenStore.save(userId, newJti, jwtProperties.refreshTokenValiditySeconds());
+    @Transactional
+    public void logout(LogoutRequestDTO request) {
+        Claims claims = parseRefreshClaimsOrThrow(request.refreshToken());
 
+        long userId = extractUserIdOrThrow(claims);
+        String jti = extractJtiOrThrow(claims);
+
+        // idempotent
+        refreshTokenStore.delete(userId, jti);
+    }
+
+    // -------------------------
+    // Private helpers
+    // -------------------------
+
+    private TokenResponseDTO issueTokens(long userId, String handle, String role) {
+        String at = jwtTokenProvider.createAccessToken(userId, handle, role);
+        String rJti = UUID.randomUUID().toString();
+        String rt =  jwtTokenProvider.createRefreshToken(userId, handle, role, rJti);
+        refreshTokenStore.save(userId, rJti, jwtProperties.refreshTokenValiditySeconds());
         return TokenResponseDTO.builder()
-                .accessToken(newAccess)
-                .refreshToken(newRefresh)
+                .accessToken(at)
+                .refreshToken(rt)
                 .tokenType("Bearer")
                 .expiresIn(jwtProperties.accessTokenValiditySeconds())
                 .build();
     }
 
+    private Claims parseRefreshClaimsOrThrow(String refreshToken) {
+        jwtTokenProvider.validate(refreshToken);
+        return jwtTokenProvider.parseClaims(refreshToken);
+    }
 
-    @Transactional
-    public void logout(LogoutRequestDTO request) {
-        String rt = request.refreshToken();
-
-        jwtTokenProvider.validate(rt);
-        Claims claims = jwtTokenProvider.parseClaims(rt);
-
+    private long extractUserIdOrThrow(Claims claims) {
         Object uidObj = claims.get("uid");
         if (!(uidObj instanceof Number n)) throw new BusinessException(ErrorCode.INVALID_TOKEN);
-        long userId = n.longValue();
+        return n.longValue();
+    }
 
+    private String extractJtiOrThrow(Claims claims) {
         String jti = claims.getId();
-        if (jti == null || jti.isBlank()) throw new BusinessException(ErrorCode.INVALID_TOKEN);
-        refreshTokenStore.delete(userId, jti);
+        if (jti == null || jti.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+        return jti;
     }
 }
