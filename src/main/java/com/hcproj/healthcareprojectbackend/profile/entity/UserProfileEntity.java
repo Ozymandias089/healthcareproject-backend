@@ -4,6 +4,8 @@ import com.hcproj.healthcareprojectbackend.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -39,4 +41,7 @@ public class UserProfileEntity extends BaseTimeEntity {
 
     @Column(name = "session_minutes")
     private Integer sessionMinutes;
+
+    @Column(name = "profile_allergies")
+    private List<AllergyType> allergies;
 }

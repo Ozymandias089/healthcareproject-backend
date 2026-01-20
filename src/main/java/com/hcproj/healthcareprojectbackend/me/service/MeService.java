@@ -6,9 +6,11 @@ import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.global.security.jwt.TokenVersionStore;
+import com.hcproj.healthcareprojectbackend.me.dto.request.OnboardingRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.request.PasswordChangeRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.request.WithdrawalRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MeResponseDTO;
+import com.hcproj.healthcareprojectbackend.profile.entity.UserProfileEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,17 +34,17 @@ public class MeService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
-        return new MeResponseDTO(
-                user.getId(),
-                user.getEmail(),
-                user.getHandle(),
-                user.getNickname(),
-                user.getPhoneNumber(),
-                user.getRole(),
-                user.getStatus(),
-                user.getProfileImageUrl(),
-                user.getCreatedAt()
-        );
+        return MeResponseDTO.builder()
+                .email(user.getEmail())
+                .handle(user.getHandle())
+                .nickname(user.getNickname())
+                .role(user.getRole().toString())
+                .status(user.getStatus().toString())
+                .profileImageUrl(user.getProfileImageUrl())
+                .phoneNumber(user.getPhoneNumber())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
     }
 
     @Transactional
@@ -82,5 +84,13 @@ public class MeService {
         user.withdraw();
 
         tokenVersionStore.bump(userId);
+    }
+
+    @Transactional
+    public void onboarding(Long userId, OnboardingRequestDTO request) {
+        UserProfileEntity profile = UserProfileEntity.builder()
+                .userId(userId)
+                .heightCm(request.profile())
+                .build();
     }
 }
