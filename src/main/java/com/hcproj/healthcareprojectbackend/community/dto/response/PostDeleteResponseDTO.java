@@ -1,12 +1,12 @@
 package com.hcproj.healthcareprojectbackend.community.dto.response;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record PostDeleteResponseDTO(
         String message,
-        LocalDateTime deletedAt
+        Instant deletedAt
 ) {
-    public static PostDeleteResponseDTO of(LocalDateTime deletedAt) {
+    public static PostDeleteResponseDTO of(Instant deletedAt) {
         return new PostDeleteResponseDTO("POST_DELETED", deletedAt);
     }
 }
