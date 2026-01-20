@@ -6,9 +6,11 @@ import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.global.security.jwt.TokenVersionStore;
+import com.hcproj.healthcareprojectbackend.me.dto.request.OnboardingRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.request.PasswordChangeRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.request.WithdrawalRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MeResponseDTO;
+import com.hcproj.healthcareprojectbackend.profile.entity.UserProfileEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -82,5 +84,13 @@ public class MeService {
         user.withdraw();
 
         tokenVersionStore.bump(userId);
+    }
+
+    @Transactional
+    public void onboarding(Long userId, OnboardingRequestDTO request) {
+        UserProfileEntity profile = UserProfileEntity.builder()
+                .userId(userId)
+                .heightCm(request.profile())
+                .build();
     }
 }

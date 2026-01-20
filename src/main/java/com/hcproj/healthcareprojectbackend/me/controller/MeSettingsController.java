@@ -18,16 +18,6 @@ public class MeSettingsController {
     private final MeService meService;
 
     /**
-     * 설정 통합조회 (스펙 확정되면 Response DTO 추가)
-     * GET /api/me/settings
-     */
-    @GetMapping("/api/me/settings")
-    public ApiResponse<Object> getSettings(@CurrentUserId Long userId) {
-        // TODO: meService.getSettings(userId) 구현 후 DTO로 교체
-        return ApiResponse.ok(null);
-    }
-
-    /**
      * 온보딩 통합 저장 (스펙 확정되면 Request DTO 추가)
      * PUT /api/me/onboarding
      */

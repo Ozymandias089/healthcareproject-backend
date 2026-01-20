@@ -4,8 +4,10 @@ import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.me.dto.internal.InjuryDTO;
+import com.hcproj.healthcareprojectbackend.me.dto.response.UserAllergiesResponseDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.UserInjuriesResponseDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.UserProfileResponseDTO;
+import com.hcproj.healthcareprojectbackend.profile.entity.AllergyType;
 import com.hcproj.healthcareprojectbackend.profile.entity.UserInjuryEntity;
 import com.hcproj.healthcareprojectbackend.profile.entity.UserProfileEntity;
 import com.hcproj.healthcareprojectbackend.profile.repository.UserInjuryRepository;
@@ -26,10 +28,6 @@ public class ProfileService {
 
     @Transactional(readOnly = true)
     public UserProfileResponseDTO getProfile(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new BusinessException(ErrorCode.NOT_FOUND);
-        }
-
         UserProfileEntity userProfile = userProfileRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
@@ -49,8 +47,6 @@ public class ProfileService {
 
     @Transactional(readOnly = true)
     public UserInjuriesResponseDTO getInjuries(Long userId) {
-        if (!userRepository.existsById(userId)) throw new BusinessException(ErrorCode.NOT_FOUND);
-
         List<UserInjuryEntity> injuries = userInjuryRepository.findAllByUserId(userId);
 
         return new UserInjuriesResponseDTO(
@@ -63,6 +59,19 @@ public class ProfileService {
                             .updatedAt(injury.getUpdatedAt())
                             .build()
                 ).toList()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public UserAllergiesResponseDTO getAllergies(Long userId) {
+        UserProfileEntity userProfile = userProfileRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        List<AllergyType> allergies = userProfile.getAllergies();
+
+        return new UserAllergiesResponseDTO(
+                allergies.size(),
+                allergies.stream().map(Enum::name).toList()
         );
     }
 }
