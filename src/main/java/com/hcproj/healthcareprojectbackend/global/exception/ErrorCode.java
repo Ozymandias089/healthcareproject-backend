@@ -80,7 +80,13 @@ public enum ErrorCode {
 
     INVALID_INJURY_LEVEL(HttpStatus.CONFLICT, "USER-002", "부상 레벨이 존재하지 않습니다."),
 
-    INVALID_ALLERGY_TYPE(HttpStatus.CONFLICT, "USER-003", "알러지 타입이 존재하지 않습니다.");
+    INVALID_ALLERGY_TYPE(HttpStatus.CONFLICT, "USER-003", "알러지 타입이 존재하지 않습니다."),
+    // -------------------------
+    // Exercise
+    // -------------------------
+
+    /** 운동을 찾을 수 없음 */
+    EXERCISE_NOT_FOUND(HttpStatus.NOT_FOUND, "EXERCISE-001", "운동을 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;
