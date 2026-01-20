@@ -1,18 +1,18 @@
 package com.hcproj.healthcareprojectbackend.me.dto.response;
 
-import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
-import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
+import lombok.Builder;
 
 import java.time.Instant;
 
+@Builder
 public record MeResponseDTO(
-        Long userId,
         String email,
         String handle,
         String nickname,
-        String phoneNumber,
-        UserRole role,
-        UserStatus status,
+        String role,
+        String status,
         String profileImageUrl,
-        Instant createdAt
+        String phoneNumber,
+        Instant createdAt,
+        Instant updatedAt
 ) {}

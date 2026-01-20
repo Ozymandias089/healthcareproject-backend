@@ -32,17 +32,17 @@ public class MeService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
-        return new MeResponseDTO(
-                user.getId(),
-                user.getEmail(),
-                user.getHandle(),
-                user.getNickname(),
-                user.getPhoneNumber(),
-                user.getRole(),
-                user.getStatus(),
-                user.getProfileImageUrl(),
-                user.getCreatedAt()
-        );
+        return MeResponseDTO.builder()
+                .email(user.getEmail())
+                .handle(user.getHandle())
+                .nickname(user.getNickname())
+                .role(user.getRole().toString())
+                .status(user.getStatus().toString())
+                .profileImageUrl(user.getProfileImageUrl())
+                .phoneNumber(user.getPhoneNumber())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
     }
 
     @Transactional
