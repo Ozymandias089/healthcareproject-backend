@@ -1,8 +1,12 @@
 package com.hcproj.healthcareprojectbackend.auth.entity;
 
 import com.hcproj.healthcareprojectbackend.global.entity.BaseTimeEntity;
+import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
+import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
+
+import static com.hcproj.healthcareprojectbackend.global.util.UtilityProvider.normalizeNullable;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -44,6 +48,26 @@ public class UserEntity extends BaseTimeEntity {
 
     public void changePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public void changeNickname(String nickname) {
+        if (nickname == null || nickname.isEmpty()) throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        if (this.nickname.equals(nickname)) return;
+        this.nickname = nickname;
+    }
+
+    public void changePhoneNumber(String phoneNumber) {
+        String normalized = normalizeNullable(phoneNumber);
+        if (this.phoneNumber == null && normalized == null) return;
+        if (this.phoneNumber != null && this.phoneNumber.equals(normalized)) return;
+        this.phoneNumber = normalized; // null이면 삭제
+    }
+
+    public void changeProfileImageUrl(String profileImageUrl) {
+        String normalized = normalizeNullable(profileImageUrl);
+        if (this.profileImageUrl == null && normalized == null) return;
+        if (this.profileImageUrl != null && this.profileImageUrl.equals(normalized)) return;
+        this.profileImageUrl = normalized; // null이면 삭제
     }
 
     public void withdraw() {
