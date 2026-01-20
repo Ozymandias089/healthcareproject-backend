@@ -44,15 +44,23 @@ public class PostEntity extends BaseTimeEntity {
         this.viewCount = (this.viewCount == null ? 0 : this.viewCount) + 1;
     }
 
-    public void update(String title, String content, String category, boolean isNotice) {
-        if (!title.isBlank() || !title == null) 
+    public void update(String title, String content, String category, Boolean isNotice) {
+
+        if (title != null && !title.isBlank()) {
             this.title = title;
-        if (!content.isBlank() || !content == null) 
+        }
+
+        if (content != null && !content.isBlank()) {
             this.content = content;
-        if (!category.isBlank() || !category == null) 
+        }
+
+        if (category != null && !category.isBlank()) {
             this.category = category;
-        if (isNotice.exists())
+        }
+
+        if (isNotice != null) {
             this.isNotice = isNotice;
+        }
     }
 
     public void delete() {
