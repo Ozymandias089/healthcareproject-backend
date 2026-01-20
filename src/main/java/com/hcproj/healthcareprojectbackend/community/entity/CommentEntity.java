@@ -30,6 +30,17 @@ public class CommentEntity extends BaseTimeEntity {
     @Column(name = "content", nullable = false)
     private String content;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private CommentStatus status; // POSTED | DELETED
+    private CommentStatus status;
+
+    public void update(String content) {
+        this.content = content;
+    }
+
+    public void delete() {
+        if (this.isDeleted()) return;
+        this.status = CommentStatus.DELETED;
+        this.markDeleted(); // BaseTimeEntity의 Instant.now() 기록 메서드 사용
+    }
 }
