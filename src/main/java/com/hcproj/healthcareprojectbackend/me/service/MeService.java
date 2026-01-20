@@ -6,15 +6,24 @@ import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.global.security.jwt.TokenVersionStore;
+import com.hcproj.healthcareprojectbackend.me.dto.internal.InjuriesRequestDTO;
+import com.hcproj.healthcareprojectbackend.me.dto.internal.ProfileDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.request.OnboardingRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.request.PasswordChangeRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.request.WithdrawalRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MeResponseDTO;
+import com.hcproj.healthcareprojectbackend.profile.entity.AllergyType;
+import com.hcproj.healthcareprojectbackend.profile.entity.InjuryLevel;
+import com.hcproj.healthcareprojectbackend.profile.entity.UserInjuryEntity;
 import com.hcproj.healthcareprojectbackend.profile.entity.UserProfileEntity;
+import com.hcproj.healthcareprojectbackend.profile.repository.UserInjuryRepository;
+import com.hcproj.healthcareprojectbackend.profile.repository.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * /api/me 계열 유스케이스 서비스.
@@ -28,6 +37,8 @@ public class MeService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenVersionStore tokenVersionStore;
+    private final UserProfileRepository userProfileRepository;
+    private final UserInjuryRepository userInjuryRepository;
 
     @Transactional(readOnly = true)
     public MeResponseDTO getMe(Long userId) {
@@ -88,9 +99,49 @@ public class MeService {
 
     @Transactional
     public void onboarding(Long userId, OnboardingRequestDTO request) {
+        /// 유저 정보 존재여부 검증
+        if (!userRepository.existsById(userId)) throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+
+        /// 기존에 유저의 부상정보가 있다면 드랍
+        userInjuryRepository.deleteByUserId(userId);
+
+        /// requestDTO에서 프로필, 부상 정보 추출
+        ProfileDTO profileDTO = request.profile();
+        List<InjuriesRequestDTO> injuriesRequestDTOs = request.injuries();
+
+        /// 알러지 정보 가공
+        List<AllergyType> allergies = request.allergies().stream()
+                .map(AllergyType::from)
+                .toList();
+
+        /// 프로필 객체 생성
         UserProfileEntity profile = UserProfileEntity.builder()
                 .userId(userId)
-                .heightCm(request.profile())
+                .heightCm(profileDTO.heightCm())
+                .weightKg(profileDTO.weightKg())
+                .age(profileDTO.age())
+                .gender(profileDTO.gender())
+                .experienceLevel(profileDTO.experienceLevel())
+                .goalType(profileDTO.goalType())
+                .weeklyDays(profileDTO.weeklyDays())
+                .sessionMinutes(profileDTO.sessionMinutes())
+                .allergies(allergies)
                 .build();
+
+        /// 부상정보 가공 및 매핑
+        List<UserInjuryEntity> injuryEntities = injuriesRequestDTOs.stream()
+                .map(dto ->
+                    UserInjuryEntity.builder()
+                        .userId(userId)
+                        .injuryPart(dto.injuryPart())
+                        .injuryLevel(InjuryLevel.from(dto.injuryLevel()))
+                        .build()
+                ).toList();
+
+        ///  프로필 정보 저장
+        userProfileRepository.save(profile);
+
+        ///  부상정보 저장
+        if (!injuryEntities.isEmpty()) userInjuryRepository.saveAll(injuryEntities);
     }
 }

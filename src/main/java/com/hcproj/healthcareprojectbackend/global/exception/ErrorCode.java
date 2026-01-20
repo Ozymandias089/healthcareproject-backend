@@ -76,7 +76,11 @@ public enum ErrorCode {
     ALREADY_WITHDRAWN(HttpStatus.CONFLICT, "AUTH-008", "이미 탈퇴된 회원입니다."),
 
     /** 비밀번호가 일치하지 않음*/
-    INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "AUTH-009", "비밀번호가 일치하지 않습니다.");
+    INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "AUTH-009", "비밀번호가 일치하지 않습니다."),
+
+    INVALID_INJURY_LEVEL(HttpStatus.CONFLICT, "USER-002", "부상 레벨이 존재하지 않습니다."),
+
+    INVALID_ALLERGY_TYPE(HttpStatus.CONFLICT, "USER-003", "알러지 타입이 존재하지 않습니다.");
 
     private final HttpStatus status;
     private final String code;

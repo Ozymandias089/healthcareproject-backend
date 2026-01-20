@@ -26,7 +26,7 @@ public class MeController {
      * 내 기본정보 조회
      * GET /api/me
      */
-    @GetMapping(produces = "application/json") // TODO
+    @GetMapping(produces = "application/json")
     public ApiResponse<MeResponseDTO> me(@CurrentUserId Long userId) {
         return ApiResponse.ok(meService.getMe(userId));
     }

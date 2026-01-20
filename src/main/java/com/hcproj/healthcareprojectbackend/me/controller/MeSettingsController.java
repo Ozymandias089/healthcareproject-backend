@@ -2,8 +2,10 @@ package com.hcproj.healthcareprojectbackend.me.controller;
 
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
+import com.hcproj.healthcareprojectbackend.me.dto.request.OnboardingRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MessageResponseDTO;
 import com.hcproj.healthcareprojectbackend.me.service.MeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,8 +24,9 @@ public class MeSettingsController {
      * PUT /api/me/onboarding
      */
     @PutMapping("/api/me/onboarding")
-    public ApiResponse<MessageResponseDTO> saveOnboarding(@CurrentUserId Long userId) {
-        // TODO: meService.saveOnboarding(userId, request)
+    public ApiResponse<MessageResponseDTO> saveOnboarding(@CurrentUserId Long userId,
+                                                          @Valid @RequestBody OnboardingRequestDTO request) {
+        meService.onboarding(userId, request);
         return ApiResponse.ok(new MessageResponseDTO("ONBOARDING_SAVED"));
     }
 }
