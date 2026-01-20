@@ -73,4 +73,13 @@ public record ApiResponse<T>(
      * 비즈니스 에러 코드를 제공한다.</p>
      */
     public record ApiError(String code, String message) {}
+
+    /**
+     * 생성 성공 응답 (201 Created).
+     *
+     * <p>데이터 생성 성공 시 사용</p>
+     */
+    public static <T> ApiResponse<T> created(T data) {
+        return new ApiResponse<>(true, data, null);
+    }
 }

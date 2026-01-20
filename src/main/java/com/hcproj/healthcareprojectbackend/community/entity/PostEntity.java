@@ -30,8 +30,9 @@ public class PostEntity extends BaseTimeEntity {
     @Column(name = "content", nullable = false)
     private String content;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private PostStatus status; // POSTED | DELETED
+    private PostStatus status;
 
     @Column(name = "view_count", nullable = false)
     private Long viewCount;
@@ -41,5 +42,22 @@ public class PostEntity extends BaseTimeEntity {
 
     public void increaseViewCount() {
         this.viewCount = (this.viewCount == null ? 0 : this.viewCount) + 1;
+    }
+
+    public void update(String title, String content, String category, boolean isNotice) {
+        if (!title.isBlank() || !title == null) 
+            this.title = title;
+        if (!content.isBlank() || !content == null) 
+            this.content = content;
+        if (!category.isBlank() || !category == null) 
+            this.category = category;
+        if (isNotice.exists())
+            this.isNotice = isNotice;
+    }
+
+    public void delete() {
+        if (this.isDeleted()) return;
+        this.status = PostStatus.DELETED;
+        this.markDeleted();
     }
 }
