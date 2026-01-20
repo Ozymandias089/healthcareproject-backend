@@ -8,9 +8,7 @@ import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.global.security.jwt.TokenVersionStore;
 import com.hcproj.healthcareprojectbackend.me.dto.internal.InjuriesRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.internal.ProfileDTO;
-import com.hcproj.healthcareprojectbackend.me.dto.request.OnboardingRequestDTO;
-import com.hcproj.healthcareprojectbackend.me.dto.request.PasswordChangeRequestDTO;
-import com.hcproj.healthcareprojectbackend.me.dto.request.WithdrawalRequestDTO;
+import com.hcproj.healthcareprojectbackend.me.dto.request.*;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MeResponseDTO;
 import com.hcproj.healthcareprojectbackend.profile.entity.AllergyType;
 import com.hcproj.healthcareprojectbackend.profile.entity.InjuryLevel;
@@ -42,26 +40,13 @@ public class MeService {
 
     @Transactional(readOnly = true)
     public MeResponseDTO getMe(Long userId) {
-        UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-
-        return MeResponseDTO.builder()
-                .email(user.getEmail())
-                .handle(user.getHandle())
-                .nickname(user.getNickname())
-                .role(user.getRole().toString())
-                .status(user.getStatus().toString())
-                .profileImageUrl(user.getProfileImageUrl())
-                .phoneNumber(user.getPhoneNumber())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
+        UserEntity user = getUserOrThrow(userId);
+        return toMeResponse(user);
     }
 
     @Transactional
     public void changePassword(Long userId, PasswordChangeRequestDTO request) {
-        UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        UserEntity user = getUserOrThrow(userId);
 
         // 회원이 활성화가 아닌 경우 변경불가
         if (!user.getStatus().equals(UserStatus.ACTIVE)) {
@@ -79,8 +64,7 @@ public class MeService {
     // 회원탈퇴
     @Transactional
     public void withdraw(Long userId, WithdrawalRequestDTO request) {
-        UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        UserEntity user = getUserOrThrow(userId);
 
         // 이미 탈퇴된 회원의 경우 409 CONFLICT 반환
         if (user.getStatus() == UserStatus.WITHDRAWN) {
@@ -144,4 +128,45 @@ public class MeService {
         ///  부상정보 저장
         if (!injuryEntities.isEmpty()) userInjuryRepository.saveAll(injuryEntities);
     }
+
+    @Transactional
+    public MeResponseDTO changeNickname(Long userId, ChangeNicknameRequestDTO request) {
+        UserEntity user = getUserOrThrow(userId);
+        user.changeNickname(request.nickname());
+        return toMeResponse(user);
+    }
+
+    @Transactional
+    public MeResponseDTO changePhoneNumber(Long userId, ChangePhoneNumberRequestDTO request) {
+        UserEntity user = getUserOrThrow(userId);
+        user.changePhoneNumber(request.phoneNumber());
+        return toMeResponse(user);
+    }
+
+    @Transactional
+    public MeResponseDTO changeProfileImageUrl(Long userId, ChangeProfileImageRequestDTO request) {
+        UserEntity user = getUserOrThrow(userId);
+        user.changeProfileImageUrl(request.profileImageUrl());
+        return toMeResponse(user);
+    }
+
+    private UserEntity getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    }
+
+    private MeResponseDTO toMeResponse(UserEntity user) {
+        return MeResponseDTO.builder()
+                .email(user.getEmail())
+                .handle(user.getHandle())
+                .nickname(user.getNickname())
+                .role(user.getRole().toString())
+                .status(user.getStatus().toString())
+                .profileImageUrl(user.getProfileImageUrl())
+                .phoneNumber(user.getPhoneNumber())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+    }
+
 }

@@ -22,7 +22,7 @@ public class AuthController {
     }
 
     // 이메일 중복 체크
-    @GetMapping("/email/check")
+    @PostMapping("/email/check")
     public ApiResponse<EmailCheckResponseDTO> checkEmail(@Valid @RequestBody EmailCheckRequestDTO request) {
         EmailCheckResponseDTO responseDTO = authService.checkEmailDuplicate(request);
         return ApiResponse.ok(responseDTO);
