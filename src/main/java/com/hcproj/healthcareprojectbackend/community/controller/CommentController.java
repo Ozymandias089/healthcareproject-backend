@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/community")
+@RequestMapping("/api/board")
 @RequiredArgsConstructor
 public class CommentController {
 
@@ -29,13 +29,14 @@ public class CommentController {
     }
 
     // 2. 댓글 수정
-    @PatchMapping("/comments/{commentId}")
+    @PatchMapping("/post/{postId}/comments/{commentId}")
     public ApiResponse<CommentUpdateResponseDTO> updateComment(
             @CurrentUserId Long userId,
+            @PathVariable("postId") Long postId,
             @PathVariable("commentId") Long commentId,
             @RequestBody CommentUpdateRequestDTO request
     ) {
-        return ApiResponse.ok(commentService.updateComment(userId, commentId, request));
+        return ApiResponse.ok(commentService.updateComment(userId, postId, commentId, request));
     }
 
     // 3. 댓글 삭제
