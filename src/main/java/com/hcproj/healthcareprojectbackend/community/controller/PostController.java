@@ -12,14 +12,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/community/posts")
+@RequestMapping("/api/board/posts")
 @RequiredArgsConstructor
 public class PostController {
 
     private final PostService postService;
 
     // 1. 게시글 목록 조회
-    @GetMapping
+    @GetMapping(produces="application/json")
     public ApiResponse<PostListResponse> getPostList(
             @RequestParam(name = "category", required = false, defaultValue = "ALL") String category,
             @RequestParam(name = "searchBy", required = false) String searchBy,
@@ -31,7 +31,7 @@ public class PostController {
     }
 
     // 2. 게시글 상세 조회
-    @GetMapping("/{postId}")
+    @GetMapping(path = "/{postId}", produces = "application/json")
     public ApiResponse<PostResponseDTO> getPostDetail(
             @PathVariable("postId") Long postId
     ) {
@@ -39,7 +39,7 @@ public class PostController {
     }
 
     // 3. 게시글 작성
-    @PostMapping
+    @PostMapping(consumes = "application/json", produces="application/json")
     public ApiResponse<PostResponseDTO> createPost(
             @CurrentUserId Long userId,
             @RequestBody PostCreateRequestDTO request
