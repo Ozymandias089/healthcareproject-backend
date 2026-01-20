@@ -51,7 +51,7 @@ public class CommunityController {
             @CurrentUserId Long userId,
             @RequestBody PostCreateRequestDTO request
     ) {
-        return ApiResponse.ok(postService.createPost(userId, request));
+        return ApiResponse.created(postService.createPost(userId, request));
     }
 
     // 4. 게시글 수정
