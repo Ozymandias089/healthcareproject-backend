@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface UserInjuryRepository extends JpaRepository<UserInjuryEntity, Long> {
     List<UserInjuryEntity> findAllByUserId(Long userId);
+    void deleteByUserId(Long userId);
 }

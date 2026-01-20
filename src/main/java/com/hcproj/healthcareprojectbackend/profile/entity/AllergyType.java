@@ -1,5 +1,8 @@
 package com.hcproj.healthcareprojectbackend.profile.entity;
 
+import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
+import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+
 public enum AllergyType {
     // 곡물
     WHEAT,          // 밀
@@ -26,5 +29,14 @@ public enum AllergyType {
 
     // 기타
     FISH,           // 생선
-    SULFITE         // 아황산류
+    SULFITE;         // 아황산류
+
+    public static AllergyType from(String value) {
+        try {
+            return AllergyType.valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.INVALID_ALLERGY_TYPE);
+        }
+    }
+
 }
