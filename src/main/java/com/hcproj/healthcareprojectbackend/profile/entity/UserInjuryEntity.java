@@ -25,6 +25,7 @@ public class UserInjuryEntity extends BaseTimeEntity {
     @Column(name = "injury_part", nullable = false, length = 100)
     private String injuryPart;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "injury_level", nullable = false, length = 20)
     private InjuryLevel injuryLevel; // MILD | CAUTION | SEVERE (서비스에서 검증)
 }

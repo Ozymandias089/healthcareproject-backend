@@ -67,7 +67,7 @@ public class CommentService {
     public CommentUpdateResponseDTO updateComment(Long userId, Long postId, Long commentId, CommentUpdateRequestDTO request) {
         CommentEntity comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
-        if (comment.getCommentId() != commentId) = throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        if (!Objects.equals(comment.getCommentId(), commentId)) throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
 
         if (!comment.getUserId().equals(userId)) throw new BusinessException(ErrorCode.NOT_COMMENT_AUTHOR);
 
