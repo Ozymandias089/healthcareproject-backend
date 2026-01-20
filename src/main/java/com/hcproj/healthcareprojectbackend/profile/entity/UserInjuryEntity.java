@@ -26,5 +26,5 @@ public class UserInjuryEntity extends BaseTimeEntity {
     private String injuryPart;
 
     @Column(name = "injury_level", nullable = false, length = 20)
-    private String injuryLevel; // MILD | CAUTION | SEVERE (서비스에서 검증)
+    private InjuryLevel injuryLevel; // MILD | CAUTION | SEVERE (서비스에서 검증)
 }

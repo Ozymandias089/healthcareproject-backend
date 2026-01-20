@@ -2,6 +2,9 @@ package com.hcproj.healthcareprojectbackend.me.controller;
 
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
+import com.hcproj.healthcareprojectbackend.me.dto.response.UserInjuriesResponseDTO;
+import com.hcproj.healthcareprojectbackend.me.dto.response.UserProfileResponseDTO;
+import com.hcproj.healthcareprojectbackend.me.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,14 +18,16 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class MeProfileController {
 
+    private final ProfileService profileService;
+
     /**
      * 신체정보 조회
      * GET /api/me/profile
      */
     @GetMapping("/api/me/profile")
-    public ApiResponse<Object> getProfile(@CurrentUserId Long userId) {
-        // TODO: profileService.getProfile(userId)
-        return ApiResponse.ok(null);
+    public ApiResponse<UserProfileResponseDTO> getProfile(@CurrentUserId Long userId) {
+        UserProfileResponseDTO responseDTO = profileService.getProfile(userId);
+        return ApiResponse.ok(responseDTO);
     }
 
     /**
@@ -30,18 +35,18 @@ public class MeProfileController {
      * GET /api/me/injuries
      */
     @GetMapping("/api/me/injuries")
-    public ApiResponse<Object> getInjuries(@CurrentUserId Long userId) {
-        // TODO: profileService.getInjuries(userId)
-        return ApiResponse.ok(null);
+    public ApiResponse<UserInjuriesResponseDTO> getInjuries(@CurrentUserId Long userId) {
+        UserInjuriesResponseDTO responseDTO = profileService.getInjuries(userId);
+        return ApiResponse.ok(responseDTO);
     }
 
-    /**
-     * 알레르기 조회
-     * GET /api/me/allergies
-     */
-    @GetMapping("/api/me/allergies")
-    public ApiResponse<Object> getAllergies(@CurrentUserId Long userId) {
-        // TODO: profileService.getAllergies(userId)
-        return ApiResponse.ok(null);
-    }
+//    /**
+//     * 알레르기 조회
+//     * GET /api/me/allergies
+//     */
+//    @GetMapping("/api/me/allergies")
+//    public ApiResponse<Object> getAllergies(@CurrentUserId Long userId) {
+//        // TODO: profileService.getAllergies(userId)
+//        return ApiResponse.ok(null);
+//    }
 }
