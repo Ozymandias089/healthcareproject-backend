@@ -45,10 +45,14 @@ public class PostEntity extends BaseTimeEntity {
     }
 
     public void update(String title, String content, String category, boolean isNotice) {
-        this.title = title;
-        this.content = content;
-        this.category = category;
-        this.isNotice = isNotice;
+        if (!title.isBlank() || !title == null) 
+            this.title = title;
+        if (!content.isBlank() || !content == null) 
+            this.content = content;
+        if (!category.isBlank() || !category == null) 
+            this.category = category;
+        if (isNotice.exists())
+            this.isNotice = isNotice;
     }
 
     public void delete() {
