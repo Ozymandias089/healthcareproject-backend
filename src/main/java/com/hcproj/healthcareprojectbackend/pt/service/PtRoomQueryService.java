@@ -4,6 +4,7 @@ import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomListResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtReservationRepository;
@@ -27,12 +28,55 @@ public class PtRoomQueryService {
     private final PtReservationRepository ptReservationRepository;
     private final UserRepository userRepository;
 
+    /**
+     * 화상PT 방 상세 조회
+     */
+    public PtRoomDetailResponseDTO getPtRoomDetail(Long ptRoomId) {
+        // 1. 방 정보 조회 (404 예외 처리)
+        PtRoomEntity ptRoom = ptRoomRepository.findById(ptRoomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        // 2. 트레이너 정보 조회
+        UserEntity trainer = userRepository.findById(ptRoom.getTrainerId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 3. 현재 참여 중인 유저 목록 조회 (status = LIVE 기준)
+        List<PtRoomParticipantEntity> activeParticipants = ptRoomParticipantRepository.findAllByPtRoomId(ptRoomId)
+                .stream()
+                .filter(p -> p.getStatus() == PtParticipantStatus.LIVE)
+                .toList();
+
+        // 4. 참여자 상세 정보(닉네임, 핸들) 매핑
+        List<Long> userIds = activeParticipants.stream().map(PtRoomParticipantEntity::getUserId).toList();
+        List<PtRoomDetailResponseDTO.UserDTO> userDTOs = userRepository.findAllById(userIds).stream()
+                .map(u -> new PtRoomDetailResponseDTO.UserDTO(u.getNickname(), u.getHandle()))
+                .toList();
+
+        // 5. 응답 조립 (entryCode는 보안상 null 반환)
+        return PtRoomDetailResponseDTO.builder()
+                .ptRoomId(ptRoom.getPtRoomId())
+                .title(ptRoom.getTitle())
+                .description(ptRoom.getDescription())
+                .scheduledAt(ptRoom.getScheduledStartAt())
+                .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null))
+                .entryCode(null)
+                .isPrivate(ptRoom.getIsPrivate())
+                .roomType(ptRoom.getRoomType())
+                .status(ptRoom.getStatus())
+                .janusRoomKey(ptRoom.getJanusRoomKey())
+                .maxParticipants(ptRoom.getMaxParticipants())
+                .participants(new PtRoomDetailResponseDTO.ParticipantsDTO(userDTOs.size(), userDTOs))
+                .build();
+    }
+
+    /**
+     * 화상PT 방 리스트 조회 (무한 스크롤 + 검색)
+     */
     public PtRoomListResponseDTO getPtRoomList(String tab, String q, Long cursorId, int size, Long meId) {
         List<PtRoomStatus> statuses = null;
         Long trainerIdFilter = null;
         List<Long> roomIdFilter = null;
 
-        // 탭 필터링 로직
         switch (tab.toUpperCase()) {
             case "LIVE" -> statuses = List.of(PtRoomStatus.LIVE);
             case "RESERVED" -> statuses = List.of(PtRoomStatus.SCHEDULED);
@@ -52,7 +96,6 @@ public class PtRoomQueryService {
 
         List<PtRoomEntity> rooms = ptRoomRepository.findPtRoomsByFilters(cursorId, statuses, trainerIdFilter, roomIdFilter, PageRequest.of(0, size + 1));
 
-        // 검색어(q) 필터링
         if (q != null && !q.isBlank()) {
             rooms = filterBySearchQuery(rooms, q);
         }

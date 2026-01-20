@@ -5,7 +5,8 @@ import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomCreateRequestDTO;
-import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomCreateResponseDTO;
+// import 변경
+import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
-import java.time.Instant; //
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -30,11 +31,11 @@ public class PtRoomService {
     private final SecureRandom random = new SecureRandom();
 
     @Transactional
-    public PtRoomCreateResponseDTO createRoom(Long userId, PtRoomCreateRequestDTO request) {
+    public PtRoomDetailResponseDTO createRoom(Long userId, PtRoomCreateRequestDTO request) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // [참고] 권한 검증은 필요 시 주석 해제하여 사용
+        // 권한 검증 (필요 시 주석 해제)
         // if (user.getRole() != UserRole.TRAINER) throw new BusinessException(ErrorCode.FORBIDDEN);
 
         if (request.roomType() == PtRoomType.RESERVED && request.scheduledAt() == null) {
@@ -52,7 +53,7 @@ public class PtRoomService {
 
         PtRoomEntity savedRoom = ptRoomRepository.save(ptRoom);
 
-        // 트레이너 자동 참여 등록 (joinedAt은 Instant 사용)
+        // 트레이너 자동 참여 등록
         PtRoomParticipantEntity participant = PtRoomParticipantEntity.builder()
                 .ptRoomId(savedRoom.getPtRoomId()).userId(userId)
                 .status(PtParticipantStatus.LIVE).joinedAt(Instant.now()).build();
@@ -70,16 +71,27 @@ public class PtRoomService {
         return sb.toString();
     }
 
-    private PtRoomCreateResponseDTO assembleCreateResponse(PtRoomEntity room, UserEntity trainer, String entryCode) {
-        var trainerDTO = new PtRoomCreateResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle());
-        var participantUser = new PtRoomCreateResponseDTO.ParticipantUserDTO(trainer.getNickname(), trainer.getHandle());
+    // 반환 타입 및 내부 빌더 수정
+    private PtRoomDetailResponseDTO assembleCreateResponse(PtRoomEntity room, UserEntity trainer, String entryCode) {
+        // TrainerDTO에 profileImageUrl(null) 추가
+        var trainerDTO = new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null);
+        // ParticipantUserDTO -> UserDTO로 변경
+        var participantUser = new PtRoomDetailResponseDTO.UserDTO(trainer.getNickname(), trainer.getHandle());
 
-        return PtRoomCreateResponseDTO.builder()
-                .ptRoomId(room.getPtRoomId()).title(room.getTitle()).description(room.getDescription())
-                .scheduledAt(room.getScheduledStartAt()).trainer(trainerDTO).entryCode(entryCode)
-                .isPrivate(room.getIsPrivate()).roomType(room.getRoomType()).status(room.getStatus())
+        return PtRoomDetailResponseDTO.builder()
+                .ptRoomId(room.getPtRoomId())
+                .title(room.getTitle())
+                .description(room.getDescription())
+                .scheduledAt(room.getScheduledStartAt())
+                .trainer(trainerDTO)
+                .entryCode(entryCode)
+                .isPrivate(room.getIsPrivate())
+                .roomType(room.getRoomType())
+                .status(room.getStatus())
+                .janusRoomKey(room.getJanusRoomKey())
                 .maxParticipants(room.getMaxParticipants())
-                .participants(new PtRoomCreateResponseDTO.ParticipantsDTO(1, List.of(participantUser)))
+                // ParticipantsDTO 구조 사용
+                .participants(new PtRoomDetailResponseDTO.ParticipantsDTO(1, List.of(participantUser)))
                 .build();
     }
 }

@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Builder
-public record PtRoomCreateResponseDTO(
+public record PtRoomDetailResponseDTO(
         Long ptRoomId,
         String title,
         String description,
@@ -21,9 +21,9 @@ public record PtRoomCreateResponseDTO(
         Integer maxParticipants,
         ParticipantsDTO participants
 ) {
-    public record TrainerDTO(String nickname, String handle) {}
+    public record TrainerDTO(String nickname, String handle, String profileImageUrl) {}
 
-    public record ParticipantsDTO(int count, List<ParticipantUserDTO> users) {}
+    public record ParticipantsDTO(int count, List<UserDTO> users) {}
 
-    public record ParticipantUserDTO(String nickname, String handle) {}
+    public record UserDTO(String nickname, String handle) {}
 }
