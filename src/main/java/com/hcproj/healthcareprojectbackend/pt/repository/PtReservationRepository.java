@@ -9,4 +9,7 @@ import java.util.Optional;
 public interface PtReservationRepository extends JpaRepository<PtReservationEntity, Long> {
     Optional<PtReservationEntity> findByPtRoomIdAndUserId(Long ptRoomId, Long userId);
     List<PtReservationEntity> findAllByPtRoomId(Long ptRoomId);
+
+    // 추가: 특정 유저의 모든 예약 내역을 조회하는 메서드
+    List<PtReservationEntity> findAllByUserId(Long userId);
 }
