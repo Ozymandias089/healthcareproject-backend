@@ -5,7 +5,7 @@ import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomCreateRequestDTO;
-import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomJoinRequestDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomEntryRequestDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
@@ -62,7 +62,7 @@ public class PtRoomService {
     }
 
     @Transactional
-    public void joinRoom(Long ptRoomId, Long userId, PtRoomJoinRequestDTO request) {
+    public void joinRoom(Long ptRoomId, Long userId, PtRoomEntryRequestDTO request) {
         PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 

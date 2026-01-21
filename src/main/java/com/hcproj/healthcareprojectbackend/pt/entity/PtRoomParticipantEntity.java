@@ -44,7 +44,7 @@ public class PtRoomParticipantEntity extends BaseTimeEntity {
         if (this.status == PtParticipantStatus.JOINED) return;
 
         this.status = PtParticipantStatus.JOINED;
-        this.joinedAt = Instant.now();;
+        this.joinedAt = Instant.now();
         this.leftAt = null; // 재입장일 경우 퇴장 시간 초기화
     }
 

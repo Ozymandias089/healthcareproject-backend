@@ -3,8 +3,8 @@ package com.hcproj.healthcareprojectbackend.pt.controller;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomCreateRequestDTO;
-import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomJoinRequestDTO;
-import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomStatusUpdateRequestDTO; 
+import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomEntryRequestDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomStatusUpdateRequestDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomListResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomParticipantsResponseDTO;
@@ -57,9 +57,9 @@ public class PtRoomController {
     public ApiResponse<Void> joinRoom(
             @PathVariable(name = "ptRoomId") Long ptRoomId,
             @CurrentUserId Long userId,
-            @RequestBody(required = false) PtRoomJoinRequestDTO request
+            @RequestBody(required = false) PtRoomEntryRequestDTO request
     ) {
-        PtRoomJoinRequestDTO safeRequest = (request != null) ? request : new PtRoomJoinRequestDTO(null);
+        PtRoomEntryRequestDTO safeRequest = (request != null) ? request : new PtRoomEntryRequestDTO(null);
         ptRoomService.joinRoom(ptRoomId, userId, safeRequest);
         return ApiResponse.ok(null);
     }

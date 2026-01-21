@@ -13,7 +13,7 @@ public record PtReservationListResponseDTO(
     ) {}
 
     public record UserProfileDTO(
-            String userHandle,
+            String handle,
             String nickname,
             String profileImageUrl
     ) {}

@@ -2,7 +2,7 @@ package com.hcproj.healthcareprojectbackend.pt.controller;
 
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
-import com.hcproj.healthcareprojectbackend.pt.dto.request.PtReservationCreateRequestDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomEntryRequestDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationListResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.service.PtReservationService;
@@ -20,11 +20,11 @@ public class PtReservationController {
     @PostMapping("/{ptRoomId}/reservations")
     public ApiResponse<PtReservationResponseDTO> createReservation(
             @PathVariable Long ptRoomId,
-            @RequestBody(required = false) PtReservationCreateRequestDTO request,
+            @RequestBody(required = false)PtRoomEntryRequestDTO request,
             @CurrentUserId Long userId
     ) {
         // request body가 없을 경우 빈 객체로 처리 (공개방 예약 시 편의성)
-        PtReservationCreateRequestDTO safeRequest = (request != null) ? request : new PtReservationCreateRequestDTO(null);
+        PtRoomEntryRequestDTO safeRequest = (request != null) ? request : new PtRoomEntryRequestDTO(null);
 
         return ApiResponse.created(
                 ptReservationService.createReservation(ptRoomId, userId, safeRequest)
@@ -52,4 +52,4 @@ public class PtReservationController {
                 ptReservationService.getReservations(ptRoomId, trainerId)
         );
     }
-  }
+}

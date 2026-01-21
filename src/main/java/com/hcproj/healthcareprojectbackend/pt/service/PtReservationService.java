@@ -4,7 +4,7 @@ import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
-import com.hcproj.healthcareprojectbackend.pt.dto.request.PtReservationCreateRequestDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomEntryRequestDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationListResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
@@ -64,7 +64,7 @@ public class PtReservationService {
 
     /* 2. 화상PT 예약 생성 */
     @Transactional
-    public PtReservationResponseDTO createReservation(Long ptRoomId, Long userId, PtReservationCreateRequestDTO request) {
+    public PtReservationResponseDTO createReservation(Long ptRoomId, Long userId, PtRoomEntryRequestDTO request) {
         // 1. 방 존재 및 상태 확인
         PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
