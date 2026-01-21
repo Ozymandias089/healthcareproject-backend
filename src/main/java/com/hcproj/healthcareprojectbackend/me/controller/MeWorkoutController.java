@@ -8,7 +8,6 @@ import com.hcproj.healthcareprojectbackend.workout.dto.response.WorkoutItemCheck
 import com.hcproj.healthcareprojectbackend.workout.service.WorkoutDayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -32,12 +31,11 @@ public class MeWorkoutController {
      * @return 운동 계획 응답
      */
     @GetMapping("/days/{date}")
-    public ResponseEntity<ApiResponse<WorkoutDayResponseDTO>> getWorkoutDayByDate(
+    public ApiResponse<WorkoutDayResponseDTO> getWorkoutDayByDate(
             @CurrentUserId Long userId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        WorkoutDayResponseDTO response = workoutDayService.getWorkoutDayByDate(userId, date);
-        return ResponseEntity.ok(ApiResponse.ok(response));
+        return ApiResponse.ok(workoutDayService.getWorkoutDayByDate(userId, date));
     }
     /**
      * 운동 항목 체크 상태 업데이트
@@ -48,14 +46,11 @@ public class MeWorkoutController {
      * @return 업데이트 결과
      */
     @PatchMapping("/workout-items/{workoutItemId}/check")
-    public ResponseEntity<ApiResponse<WorkoutItemCheckResponseDTO>> updateWorkoutItemCheck(
+    public ApiResponse<WorkoutItemCheckResponseDTO> updateWorkoutItemCheck(
             @CurrentUserId Long userId,
             @PathVariable Long workoutItemId,
             @RequestBody WorkoutItemCheckRequestDTO request
     ) {
-        WorkoutItemCheckResponseDTO response = workoutDayService.updateWorkoutItemCheck(
-                userId, workoutItemId, request.checked()
-        );
-        return ResponseEntity.ok(ApiResponse.ok(response));
+        return ApiResponse.ok(workoutDayService.updateWorkoutItemCheck(userId, workoutItemId, request.checked()));
     }
 }

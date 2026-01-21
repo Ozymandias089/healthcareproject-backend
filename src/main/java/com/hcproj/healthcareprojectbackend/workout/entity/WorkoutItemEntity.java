@@ -57,6 +57,9 @@ public class WorkoutItemEntity {
 
     // 체크 상태 변경
     public void updateChecked(Boolean checked) {
+        if (this.isChecked.equals(checked)) {
+            return;
+        }
         this.isChecked = checked;
     }
 }

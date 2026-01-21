@@ -6,7 +6,6 @@ import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -30,11 +29,10 @@ public class MeDietController {
      * @return 식단 응답
      */
     @GetMapping("/days/{date}")
-    public ResponseEntity<ApiResponse<DietDayResponseDTO>> getDietDayByDate(
+    public ApiResponse<DietDayResponseDTO> getDietDayByDate(
             @CurrentUserId Long userId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        DietDayResponseDTO response = dietDayService.getDietDayByDate(userId, date);
-        return ResponseEntity.ok(ApiResponse.ok(response));
+        return ApiResponse.ok(dietDayService.getDietDayByDate(userId, date));
     }
 }

@@ -29,14 +29,11 @@ public class DietMealItemController {
      * @return 업데이트 결과
      */
     @PatchMapping("/{dietMealItemId}/check")
-    public ResponseEntity<ApiResponse<DietMealItemCheckResponseDTO>> updateDietMealItemCheck(
+    public ApiResponse<DietMealItemCheckResponseDTO> updateDietMealItemCheck(
             @CurrentUserId Long userId,
             @PathVariable Long dietMealItemId,
             @RequestBody DietMealItemCheckRequestDTO request
     ) {
-        DietMealItemCheckResponseDTO response = dietDayService.updateDietMealItemCheck(
-                userId, dietMealItemId, request.checked()
-        );
-        return ResponseEntity.ok(ApiResponse.ok(response));
+        return ApiResponse.ok(dietDayService.updateDietMealItemCheck(userId, dietMealItemId, request.checked()));
     }
 }
