@@ -5,7 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface CalendarDayNoteRepository extends JpaRepository<CalendarDayNoteEntity, Long> {
-    List<CalendarDayNoteEntity> findAllByUserIdAndNoteDateOrderBySortOrderAsc(Long userId, LocalDate noteDate);
+    Optional<CalendarDayNoteEntity> findByUserIdAndNoteDate(Long userId, LocalDate noteDate);
+    void deleteByUserIdAndNoteDate(Long userId, LocalDate noteDate);
 }

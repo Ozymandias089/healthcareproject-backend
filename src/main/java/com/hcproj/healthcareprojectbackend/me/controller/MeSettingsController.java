@@ -59,4 +59,9 @@ public class MeSettingsController {
     ) {
         return ApiResponse.ok(meService.changeProfileImageUrl(userId, request));
     }
+
+    @GetMapping(path = "/onboarding/status")
+    public ApiResponse<Boolean> onboardingStatus(@CurrentUserId Long userId) {
+        return ApiResponse.ok(meService.onboardingStatus(userId));
+    }
 }

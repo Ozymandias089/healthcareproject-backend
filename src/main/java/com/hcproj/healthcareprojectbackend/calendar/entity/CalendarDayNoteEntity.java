@@ -11,11 +11,15 @@ import java.time.LocalDate;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 @Entity
-@Table(name = "calendar_day_notes", indexes = {
-        @Index(name = "idx_calendar_note_user_date", columnList = "user_id,note_date")
-}, uniqueConstraints = {
-        @UniqueConstraint(name = "uk_calendar_note_user_date_sort", columnNames = {"user_id", "note_date", "sort_order"})
-})
+@Table(
+        name = "calendar_day_notes",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_calendar_note_user_date", columnNames = {"user_id", "note_date"})
+        },
+        indexes = {
+                @Index(name = "idx_calendar_note_user_date", columnList = "user_id,note_date")
+        }
+)
 public class CalendarDayNoteEntity extends BaseTimeEntity {
 
     @Id
@@ -29,10 +33,11 @@ public class CalendarDayNoteEntity extends BaseTimeEntity {
     @Column(name = "note_date", nullable = false)
     private LocalDate noteDate;
 
-    @Column(name = "sort_order", nullable = false)
-    private Integer sortOrder;
-
     @Lob
     @Column(name = "note", nullable = false)
     private String note;
+
+    public void updateNote(String note) {
+        this.note = note;
+    }
 }
