@@ -86,7 +86,14 @@ public enum ErrorCode {
     // -------------------------
 
     /** 운동을 찾을 수 없음 */
-    EXERCISE_NOT_FOUND(HttpStatus.NOT_FOUND, "EXERCISE-001", "운동을 찾을 수 없습니다.");
+    EXERCISE_NOT_FOUND(HttpStatus.NOT_FOUND, "EXERCISE-001", "운동을 찾을 수 없습니다."),
+
+    // -------------------------
+    // Food
+    // -------------------------
+
+    /** 음식을 찾을 수 없음 */
+    FOOD_NOT_FOUND(HttpStatus.NOT_FOUND, "FOOD-001", "음식을 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;
