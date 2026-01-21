@@ -1,9 +1,11 @@
 package com.hcproj.healthcareprojectbackend.pt.service;
 
+import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtReservationCreateRequestDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationListResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtReservationRepository;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 
@@ -23,6 +26,43 @@ public class PtReservationService {
     private final PtRoomRepository ptRoomRepository;
     private final UserRepository userRepository;
 
+    //  1. 화상PT 예약 목록 조회 (트레이너 전용)
+    @Transactional(readOnly = true)
+    public PtReservationListResponseDTO getReservations(Long ptRoomId, Long trainerId) {
+        // 1) 방 존재 확인
+        PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        // 2) 권한 확인: 방을 생성한 트레이너 본인인지 확인
+        if (!room.getTrainerId().equals(trainerId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 3) 예약 신청(REQUESTED) 상태인 유저들만 조회
+        List<PtReservationEntity> reservations = ptReservationRepository.findAllByPtRoomIdAndStatus(
+                ptRoomId, PtReservationStatus.REQUESTED);
+
+        // 4) DTO 변환 (유저 상세 정보 매핑)
+        List<PtReservationListResponseDTO.ReservedUserDTO> reservedUsers = reservations.stream()
+                .map(res -> {
+                    UserEntity user = userRepository.findById(res.getUserId())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+                    return new PtReservationListResponseDTO.ReservedUserDTO(
+                            res.getPtReservationId(),
+                            new PtReservationListResponseDTO.UserProfileDTO(
+                                    user.getHandle(),
+                                    user.getNickname(),
+                                    user.getProfileImageUrl()
+                            ),
+                            res.getCreatedAt()
+                    );
+                }).toList();
+
+        return new PtReservationListResponseDTO(reservedUsers);
+    }
+
+    /* 2. 화상PT 예약 생성 */
     @Transactional
     public PtReservationResponseDTO createReservation(Long ptRoomId, Long userId, PtReservationCreateRequestDTO request) {
         // 1. 방 존재 및 상태 확인
@@ -78,6 +118,7 @@ public class PtReservationService {
         return toResponse(reservation);
     }
 
+    /* 3. 화상PT 예약 취소 */
     @Transactional
     public PtReservationResponseDTO cancelReservation(Long ptRoomId, Long userId) {
         // 1. 예약 정보 확인

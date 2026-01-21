@@ -3,6 +3,7 @@ package com.hcproj.healthcareprojectbackend.pt.controller;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtReservationCreateRequestDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationListResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.service.PtReservationService;
 import lombok.RequiredArgsConstructor;
@@ -40,4 +41,15 @@ public class PtReservationController {
                     ptReservationService.cancelReservation(ptRoomId, userId)
             );
         }
+
+        /* 화상PT 예약 목록 조회 (트레이너 전용) */
+        @GetMapping("/{ptRoomId}/reservations")
+        public ApiResponse<PtReservationListResponseDTO> getReservationList(
+                @PathVariable Long ptRoomId,
+                @CurrentUserId Long trainerId
+    ) {
+        return ApiResponse.ok(
+                ptReservationService.getReservations(ptRoomId, trainerId)
+        );
+    }
   }
