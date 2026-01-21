@@ -32,4 +32,15 @@ public class PtReservationEntity extends BaseTimeEntity {
 
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
+
+    // 취소된 예약을 다시 활성화 (재예약)
+    public void recover() {
+        this.status = PtReservationStatus.REQUESTED;
+        this.cancelledAt = null;
+    }
+
+    public void cancel() {
+        this.status = PtReservationStatus.CANCELLED;
+        this.cancelledAt = Instant.now();
+    }
 }
