@@ -5,7 +5,7 @@ import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomCreateRequestDTO;
-// import 변경
+import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomJoinRequestDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
@@ -35,14 +35,12 @@ public class PtRoomService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 권한 검증 (필요 시 주석 해제)
-        // if (user.getRole() != UserRole.TRAINER) throw new BusinessException(ErrorCode.FORBIDDEN);
-
         if (request.roomType() == PtRoomType.RESERVED && request.scheduledAt() == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         String entryCode = Boolean.TRUE.equals(request.isPrivate()) ? generateEntryCode() : null;
+
         PtRoomStatus initialStatus = (request.roomType() == PtRoomType.RESERVED) ? PtRoomStatus.SCHEDULED : PtRoomStatus.LIVE;
 
         PtRoomEntity ptRoom = PtRoomEntity.builder()
@@ -53,14 +51,48 @@ public class PtRoomService {
 
         PtRoomEntity savedRoom = ptRoomRepository.save(ptRoom);
 
-        // 트레이너 자동 참여 등록
         PtRoomParticipantEntity participant = PtRoomParticipantEntity.builder()
                 .ptRoomId(savedRoom.getPtRoomId()).userId(userId)
-                .status(PtParticipantStatus.LIVE).joinedAt(Instant.now()).build();
+                .status(PtParticipantStatus.JOINED)
+                .joinedAt(Instant.now()).build();
 
         ptRoomParticipantRepository.save(participant);
 
         return assembleCreateResponse(savedRoom, user, entryCode);
+    }
+
+    @Transactional
+    public void joinRoom(Long ptRoomId, Long userId, PtRoomJoinRequestDTO request) {
+        PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        if (Boolean.TRUE.equals(room.getIsPrivate())) {
+            if (request.entryCode() == null || !request.entryCode().equals(room.getEntryCode())) {
+                throw new BusinessException(ErrorCode.INVALID_ENTRY_CODE);
+            }
+        }
+
+        PtRoomParticipantEntity participant = ptRoomParticipantRepository.findByPtRoomIdAndUserId(ptRoomId, userId)
+                .orElse(PtRoomParticipantEntity.builder()
+                        .ptRoomId(ptRoomId)
+                        .userId(userId)
+                        .status(PtParticipantStatus.SCHEDULED)
+                        .joinedAt(Instant.now())
+                        .build());
+
+        participant.join();
+
+        ptRoomParticipantRepository.save(participant);
+    }
+
+    @Transactional
+    public void leaveRoom(Long ptRoomId, Long userId) {
+        PtRoomParticipantEntity participant = ptRoomParticipantRepository.findByPtRoomIdAndUserId(ptRoomId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        participant.exit();
+
+        ptRoomParticipantRepository.save(participant);
     }
 
     private String generateEntryCode() {
@@ -71,11 +103,8 @@ public class PtRoomService {
         return sb.toString();
     }
 
-    // 반환 타입 및 내부 빌더 수정
     private PtRoomDetailResponseDTO assembleCreateResponse(PtRoomEntity room, UserEntity trainer, String entryCode) {
-        // TrainerDTO에 profileImageUrl(null) 추가
         var trainerDTO = new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null);
-        // ParticipantUserDTO -> UserDTO로 변경
         var participantUser = new PtRoomDetailResponseDTO.UserDTO(trainer.getNickname(), trainer.getHandle());
 
         return PtRoomDetailResponseDTO.builder()
@@ -90,7 +119,6 @@ public class PtRoomService {
                 .status(room.getStatus())
                 .janusRoomKey(room.getJanusRoomKey())
                 .maxParticipants(room.getMaxParticipants())
-                // ParticipantsDTO 구조 사용
                 .participants(new PtRoomDetailResponseDTO.ParticipantsDTO(1, List.of(participantUser)))
                 .build();
     }
