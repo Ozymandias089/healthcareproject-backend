@@ -30,4 +30,12 @@ public class DietMealItemEntity {
 
     @Column(name = "is_checked", nullable = false)
     private Boolean isChecked;
+
+    //체크 상태 변경
+    public void updateChecked(Boolean checked) {
+        if (this.isChecked.equals(checked)) {
+            return;
+        }
+        this.isChecked = checked;
+    }
 }

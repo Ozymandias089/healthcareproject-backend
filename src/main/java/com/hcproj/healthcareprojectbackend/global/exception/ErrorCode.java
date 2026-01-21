@@ -103,7 +103,29 @@ public enum ErrorCode {
     // -------------------------
 
     /** 음식을 찾을 수 없음 */
-    FOOD_NOT_FOUND(HttpStatus.NOT_FOUND, "FOOD-001", "음식을 찾을 수 없습니다.");
+    FOOD_NOT_FOUND(HttpStatus.NOT_FOUND, "FOOD-001", "음식을 찾을 수 없습니다."),
+
+    // -------------------------
+    // Workout
+    // -------------------------
+
+    /** 운동 항목을 찾을 수 없음 */
+    WORKOUT_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "WORKOUT-002", "운동 항목을 찾을 수 없습니다."),
+    /** 해당 날짜의 운동 계획을 찾을 수 없음 */
+    WORKOUT_DAY_NOT_FOUND(HttpStatus.NOT_FOUND, "WORKOUT-001", "해당 날짜의 운동 계획이 없습니다."),
+
+    // -------------------------
+    // Diet
+    // -------------------------
+
+    /** 해당 날짜의 식단 기록을 찾을 수 없음 */
+    DIET_DAY_NOT_FOUND(HttpStatus.NOT_FOUND, "DIET-001", "해당 날짜의 식단 기록이 없습니다."),
+    /** 식단 항목을 찾을 수 없음 */
+    DIET_MEAL_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "DIET-002", "식단 항목을 찾을 수 없습니다.");
+
+
+
+
 
     private final HttpStatus status;
     private final String code;
