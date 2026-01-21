@@ -7,6 +7,7 @@ import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomJoinRequestDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomStatusUpdateRequestDTO; // ★ 추가됨
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomListResponseDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomParticipantsResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomStatusResponseDTO; // ★ 추가됨
 import com.hcproj.healthcareprojectbackend.pt.service.PtRoomQueryService;
 import com.hcproj.healthcareprojectbackend.pt.service.PtRoomService;
@@ -76,5 +77,14 @@ public class PtRoomController {
             @RequestBody @Valid PtRoomStatusUpdateRequestDTO request
     ) {
         return ApiResponse.ok(ptRoomStatusService.updateStatus(ptRoomId, userId, request));
+    }
+
+    // 화상PT 참여 인원 조회
+    @GetMapping("/{ptRoomId}/participants")
+    public ApiResponse<PtRoomParticipantsResponseDTO> getPtRoomParticipants(
+            @PathVariable Long ptRoomId,
+            @CurrentUserId Long userId
+    ) {
+        return ApiResponse.ok(ptRoomQueryService.getPtRoomParticipants(ptRoomId, userId));
     }
 }
