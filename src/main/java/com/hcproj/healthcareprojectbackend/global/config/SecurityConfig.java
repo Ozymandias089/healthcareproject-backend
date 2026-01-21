@@ -57,8 +57,8 @@ public class SecurityConfig {
      * Authorization: Bearer {accessToken}을 검사하는 JWT 인증 필터 빈 등록.
      */
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenProvider provider) {
-        return new JwtAuthenticationFilter(provider);
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenProvider provider, ObjectMapper objectMapper) {
+        return new JwtAuthenticationFilter(provider, objectMapper);
     }
 
     /**
@@ -104,6 +104,9 @@ public class SecurityConfig {
 
                         // 인증/회원 관련 API는 인증 없이 접근 가능
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        // 관리자 전용 API 잠금
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         // 헬스체크, 버전
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
