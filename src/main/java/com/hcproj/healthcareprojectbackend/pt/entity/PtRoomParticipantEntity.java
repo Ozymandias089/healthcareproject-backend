@@ -38,4 +38,21 @@ public class PtRoomParticipantEntity extends BaseTimeEntity {
 
     @Column(name = "left_at")
     private Instant leftAt;
+
+    /* 방 입장 처리 */
+    public void join() {
+        if (this.status == PtParticipantStatus.JOINED) return;
+
+        this.status = PtParticipantStatus.JOINED;
+        this.joinedAt = Instant.now();;
+        this.leftAt = null; // 재입장일 경우 퇴장 시간 초기화
+    }
+
+    /* 방 퇴장 처리   */
+    public void exit() {
+        if (this.status == PtParticipantStatus.LEFT || this.status == PtParticipantStatus.CANCELLED) return;
+
+        this.status = PtParticipantStatus.LEFT;
+        this.leftAt = Instant.now(); // 퇴장 시간 기록
+    }
 }
