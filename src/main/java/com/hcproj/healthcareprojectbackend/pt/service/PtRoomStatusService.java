@@ -30,9 +30,10 @@ public class PtRoomStatusService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        switch (request.action()) {
-            case START -> startRoom(room);
-            case END -> endRoom(room);
+        switch (request.status()) {
+            case LIVE -> startRoom(room);
+            case ENDED -> endRoom(room);
+            default -> throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE); // 그 외 상태 변경은 허용 안 함
         }
 
         return new PtRoomStatusResponseDTO(

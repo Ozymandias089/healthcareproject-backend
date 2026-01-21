@@ -51,6 +51,9 @@ public class PtRoomEntity extends BaseTimeEntity {
     private String janusRoomKey;
 
     public void start() {
+        if (this.status == PtRoomStatus.LIVE) {
+            return;
+        }
         this.status = PtRoomStatus.LIVE;
         if (this.scheduledStartAt == null) {
             this.scheduledStartAt = Instant.now();
@@ -59,6 +62,9 @@ public class PtRoomEntity extends BaseTimeEntity {
 
     /* 방 종료 처리 */
     public void end() {
+        if (this.status == PtRoomStatus.ENDED) {
+            return;
+        }
         this.status = PtRoomStatus.ENDED;
     }
 }
