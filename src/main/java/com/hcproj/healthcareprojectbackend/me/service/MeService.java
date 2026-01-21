@@ -150,6 +150,17 @@ public class MeService {
         return toMeResponse(user);
     }
 
+    /**
+     * 유저의 온보딩 정보가 존재하는지 판단하는 메서드.
+     * UserProfile이 존재하는 경우 true, 이외에는 false를 던진다.
+     * @param userId 프로필 존재여부를 검증할 유저의 id
+     * @return 온보딩 정보가 존재한다면 true, 아니라면 false
+     */
+    @Transactional(readOnly = true)
+    public Boolean onboardingStatus(Long userId) {
+        return  userProfileRepository.existsById(userId);
+    }
+
     private UserEntity getUserOrThrow(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
