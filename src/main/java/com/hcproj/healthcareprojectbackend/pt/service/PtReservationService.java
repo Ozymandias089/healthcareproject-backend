@@ -34,9 +34,9 @@ public class PtReservationService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         // 2) 권한 확인: 방을 생성한 트레이너 본인인지 확인
-        if (!room.getTrainerId().equals(trainerId)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        //  if (!room.getTrainerId().equals(trainerId)) {
+        //    throw new BusinessException(ErrorCode.FORBIDDEN);
+        // }
 
         // 3) 예약 신청(REQUESTED) 상태인 유저들만 조회
         List<PtReservationEntity> reservations = ptReservationRepository.findAllByPtRoomIdAndStatus(

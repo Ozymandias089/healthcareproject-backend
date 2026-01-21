@@ -4,14 +4,17 @@ import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomCreateRequestDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomJoinRequestDTO;
-import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomStatusUpdateRequestDTO; // ★ 추가됨
+import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomStatusUpdateRequestDTO; 
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomListResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomParticipantsResponseDTO;
-import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomStatusResponseDTO; // ★ 추가됨
+import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomStatusResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.service.PtRoomQueryService;
 import com.hcproj.healthcareprojectbackend.pt.service.PtRoomService;
 import com.hcproj.healthcareprojectbackend.pt.service.PtRoomStatusService;
+import com.hcproj.healthcareprojectbackend.pt.service.PtRoomParticipantService;
+import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomKickRequestDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomKickResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +27,7 @@ public class PtRoomController {
     private final PtRoomService ptRoomService;
     private final PtRoomQueryService ptRoomQueryService;
     private final PtRoomStatusService ptRoomStatusService;
+    private final PtRoomParticipantService ptRoomParticipantService;
 
     @PostMapping("/create")
     public ApiResponse<PtRoomDetailResponseDTO> createRoom(
@@ -86,5 +90,17 @@ public class PtRoomController {
             @CurrentUserId Long userId
     ) {
         return ApiResponse.ok(ptRoomQueryService.getPtRoomParticipants(ptRoomId, userId));
+    }
+
+    /* 화상PT 사용자 강퇴 */
+    @PostMapping("/{ptRoomId}/kick")
+    public ApiResponse<PtRoomKickResponseDTO> kickParticipant(
+            @PathVariable Long ptRoomId,
+            @RequestBody PtRoomKickRequestDTO request,
+            @CurrentUserId Long trainerId
+    ) {
+        return ApiResponse.ok(
+                ptRoomParticipantService.kickParticipant(ptRoomId, trainerId, request)
+        );
     }
 }

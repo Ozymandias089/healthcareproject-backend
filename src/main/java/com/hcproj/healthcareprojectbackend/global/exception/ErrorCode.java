@@ -80,6 +80,8 @@ public enum ErrorCode {
     INVALID_ENTRY_CODE(HttpStatus.FORBIDDEN, "R004", "참여 코드가 일치하지 않습니다."),
     CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "R005", "진행 중이거나 종료된 방의 예약은 취소할 수 없습니다."),
 
+    NOT_JOINED(HttpStatus.CONFLICT, "P001", "해당 사용자는 현재 방에 참여 중이 아닙니다."),
+
     /** 이미 탈퇴된 회원 */
     ALREADY_WITHDRAWN(HttpStatus.CONFLICT, "AUTH-008", "이미 탈퇴된 회원입니다."),
 
