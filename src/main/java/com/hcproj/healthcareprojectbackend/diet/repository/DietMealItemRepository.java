@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface DietMealItemRepository extends JpaRepository<DietMealItemEntity, Long> {
     List<DietMealItemEntity> findAllByDietMealId(Long dietMealId);
+
+    List<DietMealItemEntity> findAllByDietMealIdIn(List<Long> dietMealIds);
 }
