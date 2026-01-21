@@ -45,8 +45,20 @@ public class PtRoomEntity extends BaseTimeEntity {
     private String entryCode;
 
     @Column(name = "status", nullable = false, length = 20)
-    private PtRoomStatus status; // SCHEDULED | LIVE | ENDED | CANCELLED
+    private PtRoomStatus status; // SCHEDULED | JOINED | LEFT | KICKED
 
     @Column(name = "janus_room_key", length = 255)
     private String janusRoomKey;
+
+    public void start() {
+        this.status = PtRoomStatus.LIVE;
+        if (this.scheduledStartAt == null) {
+            this.scheduledStartAt = Instant.now();
+        }
+    }
+
+    /* 방 종료 처리 */
+    public void end() {
+        this.status = PtRoomStatus.ENDED;
+    }
 }

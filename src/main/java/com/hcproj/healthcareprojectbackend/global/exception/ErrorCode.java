@@ -72,6 +72,9 @@ public enum ErrorCode {
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "G001", "잘못된 입력값입니다."),
     NOT_COMMENT_AUTHOR(HttpStatus.FORBIDDEN, "C002", "댓글 작성자만 수정/삭제할 수 있습니다."),
 
+    INVALID_ENTRY_CODE(HttpStatus.BAD_REQUEST, "INVALID_ENTRY_CODE", "입장 코드 불일치."),
+    INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "INVALID_STATUS_TRANSITION", "유효하지 않은 상태 변경 요청입니다."),
+
     /** 이미 탈퇴된 회원 */
     ALREADY_WITHDRAWN(HttpStatus.CONFLICT, "AUTH-008", "이미 탈퇴된 회원입니다."),
 
