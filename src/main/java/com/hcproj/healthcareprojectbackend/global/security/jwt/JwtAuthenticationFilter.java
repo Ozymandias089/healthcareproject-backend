@@ -1,5 +1,6 @@
 package com.hcproj.healthcareprojectbackend.global.security.jwt;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -38,9 +39,28 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final ObjectMapper objectMapper;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, ObjectMapper objectMapper) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+
+        // permitAll인 구간은 토큰이 있더라도 필터 자체를 스킵 (만료 토큰으로 401 나가는 문제 방지)
+        if (uri.startsWith("/h2-console/")) return true;
+        if (uri.startsWith("/swagger-ui/")) return true;
+        if (uri.startsWith("/v3/api-docs/")) return true;
+        if (uri.startsWith("/api/auth/")) return true;
+
+        // 정확히 매칭 (뒤에 / 붙는 변형이 있다면 startsWith로 바꿔도 됨)
+        if ("/api/health".equals(uri)) return true;
+        if ("/api/version".equals(uri)) return true;
+
+        return false;
     }
 
     @Override
@@ -49,16 +69,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            // Authorization 헤더에서 accessToken 추출
             String token = resolveBearerToken(request);
 
-            // 토큰이 없으면(=비로그인 요청) 그냥 다음 필터로 진행
-            // 실제 접근 제어는 SecurityConfig에서 permitAll/authenticated로 결정됨
             if (token != null) {
-                // 서명/만료 검증(실패 시 BusinessException)
-                jwtTokenProvider.validate(token);
-
-                // Authentication 생성 후 SecurityContext에 저장
+                // validate() 제거: getAuthentication()이 검증+파싱+예외매핑까지 담당
                 var auth = jwtTokenProvider.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
@@ -66,29 +80,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (BusinessException e) {
-            // 토큰 문제 발생 시 인증 컨텍스트 정리
             SecurityContextHolder.clearContext();
 
-            // ErrorCode의 HTTP Status를 그대로 사용(401 등)
             response.setStatus(e.getErrorCode().status().value());
             response.setContentType("application/json;charset=UTF-8");
 
-            // ApiResponse.fail(...) 형태로 내려주기
-            // NOTE: 문자열 조합은 단순하지만, message에 특수문자/개행이 들어갈 경우 JSON 깨질 수 있음.
-            //       실무에선 ObjectMapper로 직렬화하는 방식을 권장.
-            String body = """
-            {"success":false,"data":null,"error":{"code":"%s","message":"%s"}}
-            """.formatted(e.getErrorCode().code(), e.getErrorCode().message());
+            // 프로젝트 표준 ApiResponse가 있다면 그걸로 감싸서 직렬화
+            // 예: ApiResponse.fail(code, message) 형태가 있으면 그걸 쓰면 됨
+            var body = java.util.Map.of(
+                    "success", false,
+                    "data", null,
+                    "error", java.util.Map.of(
+                            "code", e.getErrorCode().code(),
+                            "message", e.getErrorCode().message()
+                    )
+            );
 
-            response.getWriter().write(body);
+            response.getWriter().write(objectMapper.writeValueAsString(body));
         }
     }
 
-    /**
-     * Authorization 헤더에서 Bearer 토큰을 추출한다.
-     *
-     * @return "Bearer "로 시작하는 헤더가 있으면 토큰 문자열, 없으면 null
-     */
     private String resolveBearerToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         if (header == null) return null;
@@ -96,3 +107,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return header.substring(7);
     }
 }
+

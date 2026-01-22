@@ -151,22 +151,35 @@ public class JwtTokenProvider {
      * 컨트롤러/서비스에서 Authentication에서 userId를 꺼내 쓰기 편하다.</p>
      */
     public Authentication getAuthentication(String token) {
-        Claims claims = Jwts.parser().verifyWith(key).build()
-                .parseSignedClaims(token).getPayload();
+        try {
+            Claims claims = Jwts.parser().verifyWith(key).build()
+                    .parseSignedClaims(token)
+                    .getPayload();
 
-        String handle = claims.getSubject(); // principal=handle
-        String role = String.valueOf(claims.get("role"));
+            String handle = claims.getSubject();
+            String role = claims.get("role", String.class);
+            Long uid = claims.get("uid", Long.class);
 
-        // Spring Security convention: "ROLE_" prefix
-        var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+            if (handle == null || handle.isBlank() || role == null || role.isBlank() || uid == null) {
+                throw new BusinessException(ErrorCode.INVALID_TOKEN);
+            }
 
-        // principal = handle
-        var auth = new UsernamePasswordAuthenticationToken(handle, null, authorities);
+            // 방어(혹시 role 값에 ROLE_가 들어와도 정상화)
+            if (role.startsWith("ROLE_")) role = role.substring(5);
 
-        // uid를 details로 보관 (필요 시 Controller에서 꺼내쓰기 편함)
-        Object uid = claims.get("uid");
-        auth.setDetails(uid);
+            var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+            var auth = new UsernamePasswordAuthenticationToken(handle, null, authorities);
 
-        return auth;
+            // @CurrentUserId가 details에서 Long을 꺼낼 수 있게 고정
+            auth.setDetails(uid);
+
+            return auth;
+
+        } catch (ExpiredJwtException e) {
+            throw new BusinessException(ErrorCode.EXPIRED_TOKEN);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
     }
+
 }
