@@ -37,4 +37,13 @@ public class TrainerInfoEntity extends BaseTimeEntity {
 
     @Column(name = "approved_at")
     private Instant approvedAt;
+
+    // 트레이너 재신청 시 정보를 갱신하는 메서드
+    public void updateApplication(String bio, String licenseUrlsJson) {
+        this.bio = bio;
+        this.licenseUrlsJson = licenseUrlsJson;
+        this.applicationStatus = TrainerApplicationStatus.PENDING; // 다시 대기 상태로 변경
+        this.rejectReason = null; // 기존 거절 사유 초기화
+        this.approvedAt = null;
+    }
 }
