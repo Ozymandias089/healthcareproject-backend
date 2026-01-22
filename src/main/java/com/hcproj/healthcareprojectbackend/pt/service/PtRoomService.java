@@ -8,6 +8,7 @@ import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomCreateRequestDTO
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomEntryRequestDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
+import com.hcproj.healthcareprojectbackend.pt.repository.PtReservationRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import java.util.List;
 public class PtRoomService {
 
     private final PtRoomRepository ptRoomRepository;
+    private final PtReservationRepository ptReservationRepository;
     private final PtRoomParticipantRepository ptRoomParticipantRepository;
     private final UserRepository userRepository;
 
@@ -113,6 +115,32 @@ public class PtRoomService {
         participant.exit();
 
         ptRoomParticipantRepository.save(participant);
+    }
+
+    @Transactional
+    public void deleteRoom(Long ptRoomId, Long userId) {
+        PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        // 1. 권한 확인: 방장(트레이너) 본인만 삭제 가능
+        if (!room.getTrainerId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 2. 연관된 예약(Reservation) 내역 삭제 (Hard Delete)
+        List<PtReservationEntity> reservations = ptReservationRepository.findAllByPtRoomId(ptRoomId);
+        if (!reservations.isEmpty()) {
+            ptReservationRepository.deleteAll(reservations);
+        }
+
+        // 3. 연관된 참여자(Participant) 내역 삭제 (Hard Delete)
+        List<PtRoomParticipantEntity> participants = ptRoomParticipantRepository.findAllByPtRoomId(ptRoomId);
+        if (!participants.isEmpty()) {
+            ptRoomParticipantRepository.deleteAll(participants);
+        }
+
+        // 4. 방(Room) 삭제 -> 이제 Janus Key(30000번대)가 Release 됨
+        ptRoomRepository.delete(room);
     }
 
     private String generateEntryCode() {

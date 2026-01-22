@@ -17,6 +17,10 @@ public interface PtReservationRepository extends JpaRepository<PtReservationEnti
     boolean existsByPtRoomIdAndUserIdAndStatus(Long ptRoomId, Long userId, PtReservationStatus status);
     //특정 방의 현재 예약된 인원 수 계산 (정원 체크용)
     long countByPtRoomIdAndStatus(Long ptRoomId, PtReservationStatus status);
+
     // 방 ID와 상태(예: REQUESTED)를 조건으로 모든 예약 레코드를 찾아옵니다.
     List<PtReservationEntity> findAllByPtRoomIdAndStatus(Long ptRoomId, PtReservationStatus status);
+
+    //특정 유저의 특정 상태인 예약 목록 조회 (캘린더 PT 표시용)
+    List<PtReservationEntity> findAllByUserIdAndStatus(Long userId, PtReservationStatus status);
 }

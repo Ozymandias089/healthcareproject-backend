@@ -73,6 +73,16 @@ public class PtRoomController {
         return ApiResponse.ok(null);
     }
 
+    // [신규 추가] 방 삭제 API (Hard Delete)
+    @DeleteMapping("/{ptRoomId}")
+    public ApiResponse<Void> deleteRoom(
+            @PathVariable(name = "ptRoomId") Long ptRoomId,
+            @CurrentUserId Long userId
+    ) {
+        ptRoomService.deleteRoom(ptRoomId, userId);
+        return ApiResponse.ok(null);
+    }
+
     // 상태 변경 API
     @PatchMapping("/{ptRoomId}/status")
     public ApiResponse<PtRoomStatusResponseDTO> updateRoomStatus(

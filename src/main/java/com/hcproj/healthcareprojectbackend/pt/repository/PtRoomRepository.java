@@ -30,20 +30,18 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
 
     // 30000 ~ 39999 사이 빈 키(재사용 가능) 찾기
     @Query(value = """
-        WITH RECURSIVE number_series(num) AS (
-            SELECT 30000
-            UNION ALL
-            SELECT num + 1 FROM number_series WHERE num < 39999
+        SELECT CAST(x AS VARCHAR)
+        FROM SYSTEM_RANGE(30000, 39999)
+        WHERE CAST(x AS VARCHAR) NOT IN (
+            SELECT janus_room_key
+            FROM pt_rooms
+            WHERE janus_room_key IS NOT NULL
+            AND status IN ('1', '0')
         )
-        SELECT CAST(num AS CHAR) 
-        FROM number_series
-        WHERE CAST(num AS CHAR) NOT IN (
-            SELECT janus_room_key 
-            FROM pt_rooms 
-            WHERE janus_room_key IS NOT NULL 
-            AND status IN ('LIVE', 'SCHEDULED')
-        )
-        LIMIT 1
+        FETCH FIRST 1 ROWS ONLY
         """, nativeQuery = true)
     Optional<String> findFirstAvailableJanusKey();
+
+    //여러 방 ID로 방 정보 일괄 조회 (캘린더 PT 정보용)
+    List<PtRoomEntity> findAllByPtRoomIdIn(List<Long> ptRoomIds);
 }
