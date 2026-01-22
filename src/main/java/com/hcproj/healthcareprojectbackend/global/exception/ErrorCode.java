@@ -121,9 +121,17 @@ public enum ErrorCode {
     /** 해당 날짜의 식단 기록을 찾을 수 없음 */
     DIET_DAY_NOT_FOUND(HttpStatus.NOT_FOUND, "DIET-001", "해당 날짜의 식단 기록이 없습니다."),
     /** 식단 항목을 찾을 수 없음 */
-    DIET_MEAL_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "DIET-002", "식단 항목을 찾을 수 없습니다.");
+    DIET_MEAL_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "DIET-002", "식단 항목을 찾을 수 없습니다."),
 
+    // trainer
 
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-500", "서버 내부 오류가 발생했습니다."),
+
+    /** 데이터 중복 (이미 신청함 등) */
+    ALREADY_EXISTS(HttpStatus.CONFLICT, "COMMON-409", "이미 존재하는 데이터입니다."),
+
+    /** 트레이너 권한 부족 */
+    NOT_TRAINER(HttpStatus.FORBIDDEN, "TRAINER-001", "트레이너 권한이 필요합니다.");
 
 
 
