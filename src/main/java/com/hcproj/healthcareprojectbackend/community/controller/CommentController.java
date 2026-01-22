@@ -29,7 +29,7 @@ public class CommentController {
     }
 
     // 2. 댓글 수정
-    @PatchMapping("/post/{postId}/comments/{commentId}")
+    @PatchMapping("/posts/{postId}/comments/{commentId}")
     public ApiResponse<CommentUpdateResponseDTO> updateComment(
             @CurrentUserId Long userId,
             @PathVariable("postId") Long postId,

@@ -2,7 +2,8 @@ package com.hcproj.healthcareprojectbackend.pt.controller;
 
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
-import com.hcproj.healthcareprojectbackend.pt.dto.request.PtReservationCreateRequestDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomEntryRequestDTO;
+import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationListResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtReservationResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.service.PtReservationService;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +20,11 @@ public class PtReservationController {
     @PostMapping("/{ptRoomId}/reservations")
     public ApiResponse<PtReservationResponseDTO> createReservation(
             @PathVariable Long ptRoomId,
-            @RequestBody(required = false) PtReservationCreateRequestDTO request,
+            @RequestBody(required = false)PtRoomEntryRequestDTO request,
             @CurrentUserId Long userId
     ) {
         // request body가 없을 경우 빈 객체로 처리 (공개방 예약 시 편의성)
-        PtReservationCreateRequestDTO safeRequest = (request != null) ? request : new PtReservationCreateRequestDTO(null);
+        PtRoomEntryRequestDTO safeRequest = (request != null) ? request : new PtRoomEntryRequestDTO(null);
 
         return ApiResponse.created(
                 ptReservationService.createReservation(ptRoomId, userId, safeRequest)
@@ -40,4 +41,15 @@ public class PtReservationController {
                     ptReservationService.cancelReservation(ptRoomId, userId)
             );
         }
-  }
+
+        /* 화상PT 예약 목록 조회 (트레이너 전용) */
+        @GetMapping("/{ptRoomId}/reservations")
+        public ApiResponse<PtReservationListResponseDTO> getReservationList(
+                @PathVariable Long ptRoomId,
+                @CurrentUserId Long trainerId
+    ) {
+        return ApiResponse.ok(
+                ptReservationService.getReservations(ptRoomId, trainerId)
+        );
+    }
+}

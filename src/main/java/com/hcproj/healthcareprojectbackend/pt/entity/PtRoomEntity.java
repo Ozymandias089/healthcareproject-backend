@@ -67,4 +67,18 @@ public class PtRoomEntity extends BaseTimeEntity {
         }
         this.status = PtRoomStatus.ENDED;
     }
+
+    public void assignJanusKey(String janusRoomKey) {
+        this.janusRoomKey = janusRoomKey;
+    }
+
+    //  Janus Key 반납 (하드 삭제)
+    public void releaseJanusKey() {
+        this.janusRoomKey = null;
+    }
+
+    // 방 취소 처리 (상태 변경)
+    public void cancel() {
+        this.status = PtRoomStatus.CANCELLED;
+    }
 }

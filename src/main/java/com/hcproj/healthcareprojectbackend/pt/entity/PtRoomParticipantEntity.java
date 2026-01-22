@@ -44,15 +44,23 @@ public class PtRoomParticipantEntity extends BaseTimeEntity {
         if (this.status == PtParticipantStatus.JOINED) return;
 
         this.status = PtParticipantStatus.JOINED;
-        this.joinedAt = Instant.now();;
+        this.joinedAt = Instant.now();
         this.leftAt = null; // 재입장일 경우 퇴장 시간 초기화
     }
 
-    /* 방 퇴장 처리   */
+    /* 방 퇴장 처리  */
     public void exit() {
         if (this.status == PtParticipantStatus.LEFT || this.status == PtParticipantStatus.CANCELLED) return;
 
         this.status = PtParticipantStatus.LEFT;
         this.leftAt = Instant.now(); // 퇴장 시간 기록
+    }
+
+    /* 사용자 강퇴 처리  */
+    public void kick() {
+        if (this.status == PtParticipantStatus.KICKED || this.status == PtParticipantStatus.LEFT) return;
+
+        this.status = PtParticipantStatus.KICKED;
+        this.leftAt = Instant.now();
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
 
@@ -29,6 +30,21 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
     );
 
     List<PtRoomEntity> findAllByTrainerId(Long trainerId);
+
+    // 30000 ~ 39999 사이 빈 키(재사용 가능) 찾기
+    @Query(value = """
+        SELECT CAST(x AS VARCHAR)
+        FROM SYSTEM_RANGE(30000, 39999)
+        WHERE CAST(x AS VARCHAR) NOT IN (
+            SELECT janus_room_key
+            FROM pt_rooms
+            WHERE janus_room_key IS NOT NULL
+            AND status IN ('1', '0')
+        )
+        FETCH FIRST 1 ROWS ONLY
+        """, nativeQuery = true)
+    Optional<String> findFirstAvailableJanusKey();
+
     //여러 방 ID로 방 정보 일괄 조회 (캘린더 PT 정보용)
     List<PtRoomEntity> findAllByPtRoomIdIn(List<Long> ptRoomIds);
 
