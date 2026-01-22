@@ -1,7 +1,7 @@
 package com.hcproj.healthcareprojectbackend.calendar.controller;
 
 import com.hcproj.healthcareprojectbackend.calendar.dto.response.DailyDetailResponseDTO;
-import com.hcproj.healthcareprojectbackend.calendar.dto.response.WeeklyCalendarResponseDTO;
+import com.hcproj.healthcareprojectbackend.calendar.dto.response.CalendarRangeResponseDTO;
 import com.hcproj.healthcareprojectbackend.calendar.service.CalendarSummaryService;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
@@ -19,11 +19,12 @@ public class CalendarSummaryController {
     private final CalendarSummaryService calendarSummaryService;
 
     @GetMapping("/me/calendar/weekly")
-    public ApiResponse<WeeklyCalendarResponseDTO> getWeeklyCalendar(
+    public ApiResponse<CalendarRangeResponseDTO> getWeeklyCalendar(
             @CurrentUserId Long userId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        return ApiResponse.ok(calendarSummaryService.getWeeklyCalendar(userId, startDate));
+        return ApiResponse.ok(calendarSummaryService.getWeeklyCalendar(userId, startDate, endDate));
     }
 
     @GetMapping("/calendar/day/{date}")

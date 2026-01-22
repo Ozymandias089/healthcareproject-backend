@@ -30,6 +30,7 @@ public class PtRoomParticipantEntity extends BaseTimeEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private PtParticipantStatus status; // JOINED | LEFT | KICKED
 

@@ -85,16 +85,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             response.setStatus(e.getErrorCode().status().value());
             response.setContentType("application/json;charset=UTF-8");
 
-            // 프로젝트 표준 ApiResponse가 있다면 그걸로 감싸서 직렬화
-            // 예: ApiResponse.fail(code, message) 형태가 있으면 그걸 쓰면 됨
-            var body = java.util.Map.of(
-                    "success", false,
-                    "data", null,
-                    "error", java.util.Map.of(
-                            "code", e.getErrorCode().code(),
-                            "message", e.getErrorCode().message()
-                    )
-            );
+            var error = new java.util.LinkedHashMap<String, Object>();
+            error.put("code", e.getErrorCode().code());
+            error.put("message", e.getErrorCode().message()); // null이어도 OK
+
+            var body = new java.util.LinkedHashMap<String, Object>();
+            body.put("success", false);
+            body.put("data", null);
+            body.put("error", error);
 
             response.getWriter().write(objectMapper.writeValueAsString(body));
         }
