@@ -24,7 +24,6 @@ public class PtRoomService {
 
     private final PtRoomRepository ptRoomRepository;
     private final PtRoomParticipantRepository ptRoomParticipantRepository;
-    // PtReservationRepository는 더 이상 deleteRoom에서 사용하지 않으므로 제거했습니다.
     private final UserRepository userRepository;
 
     private static final String CHAR_POOL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -45,10 +44,9 @@ public class PtRoomService {
         String entryCode = Boolean.TRUE.equals(request.isPrivate()) ? generateEntryCode() : null;
         PtRoomStatus initialStatus = (request.roomType() == PtRoomType.RESERVED) ? PtRoomStatus.SCHEDULED : PtRoomStatus.LIVE;
 
-        // 3. 사용 가능한 빈 Janus Key 조회 (30000 ~ 39999)
-        // 삭제/취소된 방의 키(NULL로 반납된 것)도 여기서 다시 찾아짐
+        // 3. 빈 키 조회
         String availableKey = ptRoomRepository.findFirstAvailableJanusKey()
-                .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_FULL)); // 가용 범위 초과 시 에러
+                .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_FULL));
 
         // 4. Entity 생성
         PtRoomEntity ptRoom = PtRoomEntity.builder()
@@ -63,21 +61,24 @@ public class PtRoomService {
                 .status(initialStatus)
                 .build();
 
-        // 5. 키 할당 (비즈니스 메서드 사용)
+        // 5. 키 할당
         ptRoom.assignJanusKey(availableKey);
 
         // 6. 저장
         PtRoomEntity savedRoom = ptRoomRepository.save(ptRoom);
 
-        // 7. 참여자 등록
-        PtRoomParticipantEntity participant = PtRoomParticipantEntity.builder()
-                .ptRoomId(savedRoom.getPtRoomId())
-                .userId(userId)
-                .status(PtParticipantStatus.JOINED)
-                .joinedAt(Instant.now())
-                .build();
+        // 7. [수정됨] 참여자 등록 (LIVE 상태일 때만 트레이너 자동 참여)
+        // 예약(SCHEDULED) 상태일 때는 트레이너도 아직 입장하지 않은 상태로 둠
+        if (initialStatus == PtRoomStatus.LIVE) {
+            PtRoomParticipantEntity participant = PtRoomParticipantEntity.builder()
+                    .ptRoomId(savedRoom.getPtRoomId())
+                    .userId(userId)
+                    .status(PtParticipantStatus.JOINED)
+                    .joinedAt(Instant.now())
+                    .build();
 
-        ptRoomParticipantRepository.save(participant);
+            ptRoomParticipantRepository.save(participant);
+        }
 
         return assembleCreateResponse(savedRoom, user, entryCode);
     }
@@ -116,24 +117,22 @@ public class PtRoomService {
         ptRoomParticipantRepository.save(participant);
     }
 
-    // [수정됨] 방 삭제 (Soft Delete + Key Release)
+    // 방 삭제 (Soft Delete + Janus Key Hard Delete)
     @Transactional
     public void deleteRoom(Long ptRoomId, Long userId) {
         PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
-        // 1. 권한 확인: 방장(트레이너) 본인만 삭제 가능
+        // 1. 권한 확인
         if (!room.getTrainerId().equals(userId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        // 2. 방 상태를 '취소'로 변경 (캘린더 히스토리용으로 데이터 보존)
+        // 2. 방 상태 취소 (캘린더 히스토리용 데이터 보존)
         room.cancel();
 
         // 3. Janus Key 반납 (NULL 처리 -> 30000번대 번호 즉시 재사용 가능)
         room.releaseJanusKey();
-
-        // 예약 내역(Reservation)이나 참여자(Participant) 내역은 삭제하지 않고 남겨둡니다.
     }
 
     private String generateEntryCode() {
@@ -148,6 +147,12 @@ public class PtRoomService {
         var trainerDTO = new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null);
         var participantUser = new PtRoomDetailResponseDTO.UserDTO(trainer.getNickname(), trainer.getHandle());
 
+        // [수정됨] 예약(SCHEDULED) 상태일 때는 참여자 목록을 비워둠
+        // LIVE 상태일 때만 트레이너가 포함됨
+        List<PtRoomDetailResponseDTO.UserDTO> participantsList = (room.getStatus() == PtRoomStatus.LIVE)
+                ? List.of(participantUser)
+                : List.of();
+
         return PtRoomDetailResponseDTO.builder()
                 .ptRoomId(room.getPtRoomId())
                 .title(room.getTitle())
@@ -158,9 +163,10 @@ public class PtRoomService {
                 .isPrivate(room.getIsPrivate())
                 .roomType(room.getRoomType())
                 .status(room.getStatus())
-                .janusRoomKey(room.getJanusRoomKey()) // 재사용된 키가 반환됨
+                .janusRoomKey(room.getJanusRoomKey())
                 .maxParticipants(room.getMaxParticipants())
-                .participants(new PtRoomDetailResponseDTO.ParticipantsDTO(1, List.of(participantUser)))
+                // [수정됨] 위에서 만든 리스트 사용
+                .participants(new PtRoomDetailResponseDTO.ParticipantsDTO(participantsList.size(), participantsList))
                 .build();
     }
 }
