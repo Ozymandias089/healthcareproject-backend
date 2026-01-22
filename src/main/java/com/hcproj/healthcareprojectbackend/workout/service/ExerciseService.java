@@ -113,7 +113,7 @@ public class ExerciseService {
 
         // 6. nextCursor 계산
         Long nextCursor = hasNext && !resultEntities.isEmpty()
-                ? resultEntities.get(resultEntities.size() - 1).getExerciseId()
+                ? resultEntities.getLast().getExerciseId()
                 : null;
 
         return new ExerciseListResponseDTO(items, nextCursor, hasNext);
