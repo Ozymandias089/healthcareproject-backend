@@ -29,11 +29,15 @@ public class PtRoomEntity extends BaseTimeEntity {
     @Column(name = "description")
     private String description;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "room_type", nullable = false, length = 20)
     private PtRoomType roomType; // LIVE | RESERVED
 
     @Column(name = "scheduled_start_at")
     private Instant scheduledStartAt;
+
+    @Column(name = "started_at")
+    private Instant startedAt;
 
     @Column(name = "max_participants")
     private Integer maxParticipants;
@@ -44,19 +48,17 @@ public class PtRoomEntity extends BaseTimeEntity {
     @Column(name = "entry_code", length = 255)
     private String entryCode;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private PtRoomStatus status; // SCHEDULED | JOINED | LEFT | KICKED
-
-    @Column(name = "janus_room_key", length = 255)
-    private String janusRoomKey;
 
     public void start() {
         if (this.status == PtRoomStatus.LIVE) {
             return;
         }
         this.status = PtRoomStatus.LIVE;
-        if (this.scheduledStartAt == null) {
-            this.scheduledStartAt = Instant.now();
+        if (this.startedAt == null) {
+            this.startedAt = Instant.now();
         }
     }
 
@@ -66,19 +68,13 @@ public class PtRoomEntity extends BaseTimeEntity {
             return;
         }
         this.status = PtRoomStatus.ENDED;
-    }
-
-    public void assignJanusKey(String janusRoomKey) {
-        this.janusRoomKey = janusRoomKey;
-    }
-
-    //  Janus Key 반납 (하드 삭제)
-    public void releaseJanusKey() {
-        this.janusRoomKey = null;
+        markDeleted();
     }
 
     // 방 취소 처리 (상태 변경)
     public void cancel() {
+        if (this.status == PtRoomStatus.CANCELLED) return;
         this.status = PtRoomStatus.CANCELLED;
+        markDeleted();
     }
 }
