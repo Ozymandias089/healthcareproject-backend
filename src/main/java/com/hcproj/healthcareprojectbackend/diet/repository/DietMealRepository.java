@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface DietMealRepository extends JpaRepository<DietMealEntity, Long> {
     List<DietMealEntity> findAllByDietDayIdOrderBySortOrderAsc(Long dietDayId);
+    List<DietMealEntity> findAllByDietDayIdInOrderByDietDayIdAscSortOrderAsc(List<Long> dietDayIds);
 }

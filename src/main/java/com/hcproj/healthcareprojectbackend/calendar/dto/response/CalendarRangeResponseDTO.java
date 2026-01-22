@@ -5,7 +5,7 @@ import lombok.Builder;
 import java.util.List;
 
 @Builder
-public record WeeklyCalendarResponseDTO(
+public record CalendarRangeResponseDTO(
         String startDate,
         String endDate,
         List<DayStatusDTO> days
@@ -16,7 +16,8 @@ public record WeeklyCalendarResponseDTO(
             String date,
             DietStatusDTO diet,
             VideoPtStatusDTO videoPt,
-            WorkoutStatusDTO workout
+            WorkoutStatusDTO workout,
+            MemoExistenceDTO memo
     ) {}
 
     @Builder
@@ -27,6 +28,9 @@ public record WeeklyCalendarResponseDTO(
 
     @Builder
     public record WorkoutStatusDTO(WorkoutStatus status) {}
+
+    @Builder
+    public record MemoExistenceDTO(boolean exists) {}
 
     public enum DietStatus {
         NONE,       // 기록 없음
