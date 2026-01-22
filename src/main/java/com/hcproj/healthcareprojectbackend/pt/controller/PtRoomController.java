@@ -46,11 +46,15 @@ public class PtRoomController {
         return ApiResponse.ok(ptRoomQueryService.getPtRoomList(tab, q, cursorId, size, userId));
     }
 
+    // 상세 조회 시 userId 전달하여 entryCode 노출 여부 판단
     @GetMapping("/{ptRoomId}")
     public ApiResponse<PtRoomDetailResponseDTO> getPtRoomDetail(
-            @PathVariable(name = "ptRoomId") Long ptRoomId
+            @PathVariable(name = "ptRoomId") Long ptRoomId,
+            @CurrentUserId Long userId // Header Token에서 ID 추출
     ) {
-        return ApiResponse.ok(ptRoomQueryService.getPtRoomDetail(ptRoomId));
+        // userId가 null일 수도 있음 (비로그인 상태 허용 시)
+        // 하지만 @CurrentUserId 로직상 보통 로그인 필수가 많으므로, 필요에 따라 null 처리
+        return ApiResponse.ok(ptRoomQueryService.getPtRoomDetail(ptRoomId, userId));
     }
 
     @PostMapping("/{ptRoomId}/join")

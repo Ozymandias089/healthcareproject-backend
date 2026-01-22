@@ -6,7 +6,7 @@ import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomListResponseDTO;
-import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomParticipantsResponseDTO; // ★ 추가됨
+import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomParticipantsResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtReservationRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
@@ -31,8 +31,9 @@ public class PtRoomQueryService {
 
     /**
      * 화상PT 방 상세 조회
+     * [수정됨] currentUserId 파라미터 추가 -> 트레이너 본인 확인용
      */
-    public PtRoomDetailResponseDTO getPtRoomDetail(Long ptRoomId) {
+    public PtRoomDetailResponseDTO getPtRoomDetail(Long ptRoomId, Long currentUserId) {
         PtRoomEntity ptRoom = ptRoomRepository.findById(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
@@ -49,13 +50,19 @@ public class PtRoomQueryService {
                 .map(u -> new PtRoomDetailResponseDTO.UserDTO(u.getNickname(), u.getHandle()))
                 .toList();
 
+        // [수정 로직] 트레이너 본인일 때만 entryCode 노출, 아니면 null
+        String entryCode = null;
+        if (currentUserId != null && currentUserId.equals(ptRoom.getTrainerId())) {
+            entryCode = ptRoom.getEntryCode();
+        }
+
         return PtRoomDetailResponseDTO.builder()
                 .ptRoomId(ptRoom.getPtRoomId())
                 .title(ptRoom.getTitle())
                 .description(ptRoom.getDescription())
                 .scheduledAt(ptRoom.getScheduledStartAt())
                 .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null))
-                .entryCode(null)
+                .entryCode(entryCode) // [수정] 조건부 반환
                 .isPrivate(ptRoom.getIsPrivate())
                 .roomType(ptRoom.getRoomType())
                 .status(ptRoom.getStatus())
@@ -72,14 +79,13 @@ public class PtRoomQueryService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         // 2. 권한 체크: 예약된 상태(REQUESTED)여야 함 (트레이너 포함)
-         boolean isReserved = ptReservationRepository.existsByPtRoomIdAndUserIdAndStatus(
+        boolean isReserved = ptReservationRepository.existsByPtRoomIdAndUserIdAndStatus(
                 ptRoomId, userId, PtReservationStatus.REQUESTED
-         );
+        );
 
-         if (!isReserved) {
-//             명세서 요구사항: 예약자가 아니면 403 Forbidden
+        if (!isReserved) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
-         }
+        }
 
         // 3. 참여 중(JOINED)인 인원 조회 (입장 순)
         List<PtRoomParticipantEntity> participants = ptRoomParticipantRepository
@@ -122,7 +128,7 @@ public class PtRoomQueryService {
         List<Long> roomIdFilter = null;
 
         switch (tab.toUpperCase()) {
-            case "LIVE" -> statuses = List.of(PtRoomStatus.LIVE); // 방 상태는 LIVE
+            case "LIVE" -> statuses = List.of(PtRoomStatus.LIVE);
             case "RESERVED" -> statuses = List.of(PtRoomStatus.SCHEDULED);
             case "MY_RESERVATIONS" -> {
                 if (meId == null) throw new BusinessException(ErrorCode.UNAUTHORIZED);

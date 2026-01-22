@@ -8,7 +8,6 @@ import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomCreateRequestDTO
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomEntryRequestDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
-import com.hcproj.healthcareprojectbackend.pt.repository.PtReservationRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +23,8 @@ import java.util.List;
 public class PtRoomService {
 
     private final PtRoomRepository ptRoomRepository;
-    private final PtReservationRepository ptReservationRepository;
     private final PtRoomParticipantRepository ptRoomParticipantRepository;
+    // PtReservationRepository는 더 이상 deleteRoom에서 사용하지 않으므로 제거했습니다.
     private final UserRepository userRepository;
 
     private static final String CHAR_POOL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -47,7 +46,7 @@ public class PtRoomService {
         PtRoomStatus initialStatus = (request.roomType() == PtRoomType.RESERVED) ? PtRoomStatus.SCHEDULED : PtRoomStatus.LIVE;
 
         // 3. 사용 가능한 빈 Janus Key 조회 (30000 ~ 39999)
-        // 삭제/종료된 방의 키도 재사용 가능
+        // 삭제/취소된 방의 키(NULL로 반납된 것)도 여기서 다시 찾아짐
         String availableKey = ptRoomRepository.findFirstAvailableJanusKey()
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_FULL)); // 가용 범위 초과 시 에러
 
@@ -64,10 +63,10 @@ public class PtRoomService {
                 .status(initialStatus)
                 .build();
 
-        // 5. 키 할당 (Setter 대신 비즈니스 메서드 사용)
+        // 5. 키 할당 (비즈니스 메서드 사용)
         ptRoom.assignJanusKey(availableKey);
 
-        // 6. 저장 (키가 할당된 상태로 저장됨)
+        // 6. 저장
         PtRoomEntity savedRoom = ptRoomRepository.save(ptRoom);
 
         // 7. 참여자 등록
@@ -117,6 +116,7 @@ public class PtRoomService {
         ptRoomParticipantRepository.save(participant);
     }
 
+    // [수정됨] 방 삭제 (Soft Delete + Key Release)
     @Transactional
     public void deleteRoom(Long ptRoomId, Long userId) {
         PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
@@ -127,20 +127,13 @@ public class PtRoomService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        // 2. 연관된 예약(Reservation) 내역 삭제 (Hard Delete)
-        List<PtReservationEntity> reservations = ptReservationRepository.findAllByPtRoomId(ptRoomId);
-        if (!reservations.isEmpty()) {
-            ptReservationRepository.deleteAll(reservations);
-        }
+        // 2. 방 상태를 '취소'로 변경 (캘린더 히스토리용으로 데이터 보존)
+        room.cancel();
 
-        // 3. 연관된 참여자(Participant) 내역 삭제 (Hard Delete)
-        List<PtRoomParticipantEntity> participants = ptRoomParticipantRepository.findAllByPtRoomId(ptRoomId);
-        if (!participants.isEmpty()) {
-            ptRoomParticipantRepository.deleteAll(participants);
-        }
+        // 3. Janus Key 반납 (NULL 처리 -> 30000번대 번호 즉시 재사용 가능)
+        room.releaseJanusKey();
 
-        // 4. 방(Room) 삭제 -> 이제 Janus Key(30000번대)가 Release 됨
-        ptRoomRepository.delete(room);
+        // 예약 내역(Reservation)이나 참여자(Participant) 내역은 삭제하지 않고 남겨둡니다.
     }
 
     private String generateEntryCode() {
