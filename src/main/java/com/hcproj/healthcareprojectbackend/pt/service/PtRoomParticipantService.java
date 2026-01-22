@@ -28,10 +28,10 @@ public class PtRoomParticipantService {
         PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
-        // ★ [임시 주석 처리] 트레이너 권한 체크
-        // if (!room.getTrainerId().equals(trainerId)) {
-        //    throw new BusinessException(ErrorCode.FORBIDDEN);
-        // }
+         // [임시 주석 처리] 트레이너 권한 체크
+         if (!room.getTrainerId().equals(trainerId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+         }
 
         // 2. 강퇴 대상 유저 확인
         UserEntity targetUser = userRepository.findByHandle(request.targetHandle())
@@ -39,9 +39,9 @@ public class PtRoomParticipantService {
 
         // ★ [임시 주석 처리] 자기 자신 강퇴 방지 (테스트를 위해)
         // 자기 자신 강퇴 방지
-        // if (targetUser.getId().equals(trainerId)) {
-        //    throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        // }
+         if (targetUser.getId().equals(trainerId)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+         }
 
         // 3. 참여 기록 확인
         PtRoomParticipantEntity participant = participantRepository.findByPtRoomIdAndUserId(ptRoomId, targetUser.getId())

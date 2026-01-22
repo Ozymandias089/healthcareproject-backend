@@ -72,14 +72,14 @@ public class PtRoomQueryService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         // 2. 권한 체크: 예약된 상태(REQUESTED)여야 함 (트레이너 포함)
-        // boolean isReserved = ptReservationRepository.existsByPtRoomIdAndUserIdAndStatus(
-        //        ptRoomId, userId, PtReservationStatus.REQUESTED
-        // );
+         boolean isReserved = ptReservationRepository.existsByPtRoomIdAndUserIdAndStatus(
+                ptRoomId, userId, PtReservationStatus.REQUESTED
+         );
 
-        // if (!isReserved) {
-            // 명세서 요구사항: 예약자가 아니면 403 Forbidden
-        //    throw new BusinessException(ErrorCode.FORBIDDEN);
-        // }
+         if (!isReserved) {
+//             명세서 요구사항: 예약자가 아니면 403 Forbidden
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+         }
 
         // 3. 참여 중(JOINED)인 인원 조회 (입장 순)
         List<PtRoomParticipantEntity> participants = ptRoomParticipantRepository

@@ -14,7 +14,7 @@ import java.time.ZoneId;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class AdminDashboardFacade {
+public class AdminDashboardService {
 
     private final AdminUserRepository adminUserRepository;
     private final AdminPtRoomRepository adminPtRoomRepository;
