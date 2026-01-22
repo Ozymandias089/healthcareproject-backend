@@ -69,4 +69,15 @@ public class TrainerService {
 
         return TrainerApplicationResponseDTO.of(trainerInfo.getApplicationStatus());
     }
+    @Transactional
+    public void updateBio(Long userId, String bio) {
+        // 1. TrainerInfoEntity 존재 여부 확인
+        // (트레이너 신청을 하지 않은 유저는 수정 불가 -> 에러 발생)
+        TrainerInfoEntity trainerInfo = trainerInfoRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        // 또는 ErrorCode.TRAINER_INFO_NOT_FOUND 등 적절한 에러코드 사용
+
+        // 2. 정보 수정 (Entity 메서드 위임)
+        trainerInfo.updateBio(bio);
+    }
 }

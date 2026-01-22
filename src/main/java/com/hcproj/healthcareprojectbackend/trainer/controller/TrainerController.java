@@ -3,14 +3,12 @@ package com.hcproj.healthcareprojectbackend.trainer.controller;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
 import com.hcproj.healthcareprojectbackend.trainer.dto.request.TrainerApplicationRequestDTO;
+import com.hcproj.healthcareprojectbackend.trainer.dto.request.TrainerBioUpdateRequestDTO;
 import com.hcproj.healthcareprojectbackend.trainer.dto.response.TrainerApplicationResponseDTO;
 import com.hcproj.healthcareprojectbackend.trainer.service.TrainerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/trainer")
@@ -26,5 +24,15 @@ public class TrainerController {
             @Valid @RequestBody TrainerApplicationRequestDTO request
     ) {
         return ApiResponse.created(trainerService.submitApplication(userId, request));
+    }
+
+    // [USER-009 관련 확장] 트레이너 소개문구 수정
+    @PatchMapping("/bio")
+    public ApiResponse<Void> updateBio(
+            @CurrentUserId Long userId,
+            @RequestBody TrainerBioUpdateRequestDTO request
+    ) {
+        trainerService.updateBio(userId, request.bio());
+        return ApiResponse.ok(null);
     }
 }
