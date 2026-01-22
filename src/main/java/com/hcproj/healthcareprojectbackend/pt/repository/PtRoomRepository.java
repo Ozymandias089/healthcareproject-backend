@@ -56,32 +56,26 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
             @Param("endExclusive") Instant endExclusive
     );
 
-    /**
-     * ✅ DailyDetail 전용: 특정 날짜에 해당 유저의 화상 PT 예약(REQUESTED 등)이 있으면
-     * 트레이너 닉네임과 시작시각을 시간순으로 반환한다.
-     *
-     * - 엔티티 연관관계가 없어도 cross join 방식으로 JPQL 조인 가능
-     * - 닉네임까지 한 번에 가져오므로 추가 조회 불필요(1쿼리)
-     */
     @Query("""
-        select VideoPtDailyRow(
-            u.nickname,
-            r.scheduledStartAt
-        )
-        from PtRoomEntity r, PtReservationEntity res, UserEntity u
-        where res.ptRoomId = r.ptRoomId
-          and res.userId = :userId
-          and res.status = :status
-          and u.id = r.trainerId
-          and r.scheduledStartAt is not null
-          and r.scheduledStartAt >= :startInclusive
-          and r.scheduledStartAt <  :endExclusive
-        order by r.scheduledStartAt asc
-    """)
+    select new com.hcproj.healthcareprojectbackend.pt.dto.internal.VideoPtDailyRow(
+        u.nickname,
+        r.scheduledStartAt
+    )
+    from PtRoomEntity r, PtReservationEntity res, UserEntity u
+    where res.ptRoomId = r.ptRoomId
+      and res.userId = :userId
+      and res.status = :status
+      and u.id = r.trainerId
+      and r.scheduledStartAt is not null
+      and r.scheduledStartAt >= :startInclusive
+      and r.scheduledStartAt <  :endExclusive
+    order by r.scheduledStartAt asc
+""")
     List<VideoPtDailyRow> findDailyVideoPtRows(
             @Param("userId") Long userId,
             @Param("status") PtReservationStatus status,
             @Param("startInclusive") Instant startInclusive,
             @Param("endExclusive") Instant endExclusive
     );
+
 }
