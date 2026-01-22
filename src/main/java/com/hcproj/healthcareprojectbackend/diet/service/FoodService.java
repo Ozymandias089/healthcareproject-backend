@@ -2,6 +2,8 @@ package com.hcproj.healthcareprojectbackend.diet.service;
 
 import com.hcproj.healthcareprojectbackend.diet.dto.response.FoodDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.diet.dto.response.FoodListResponseDTO;
+import com.hcproj.healthcareprojectbackend.diet.dto.request.FoodCreateRequestDTO;
+import com.hcproj.healthcareprojectbackend.diet.dto.response.FoodCreateResponseDTO;
 import com.hcproj.healthcareprojectbackend.diet.entity.FoodEntity;
 import com.hcproj.healthcareprojectbackend.diet.repository.FoodRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
@@ -83,5 +85,34 @@ public class FoodService {
                 : null;
 
         return new FoodListResponseDTO(items, nextCursor, hasNext);
+    }
+    /**
+     * 음식 등록 (관리자 전용)
+     */
+    @Transactional
+    public FoodCreateResponseDTO createFood(FoodCreateRequestDTO request) {
+        FoodEntity food = FoodEntity.builder()
+                .name(request.name())
+                .imageUrl(request.imageUrl())
+                .nutritionUnit(request.nutritionUnit())
+                .nutritionAmount(request.nutritionAmount())
+                .calories(request.calories())
+                .carbs(request.carbs())
+                .protein(request.protein())
+                .fat(request.fat())
+                .displayServing(request.displayServing())
+                .allergyCodes(request.allergyCodes())
+                .isActive(request.isActive())
+                .build();
+
+        FoodEntity saved = foodRepository.save(food);
+
+        return FoodCreateResponseDTO.builder()
+                .foodId(saved.getFoodId())
+                .name(saved.getName())
+                .calories(saved.getCalories())
+                .isActive(saved.getIsActive())
+                .createdAt(saved.getCreatedAt())
+                .build();
     }
 }

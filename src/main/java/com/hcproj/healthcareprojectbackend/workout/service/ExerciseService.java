@@ -7,6 +7,8 @@ import com.hcproj.healthcareprojectbackend.workout.dto.response.ExerciseDetailRe
 import com.hcproj.healthcareprojectbackend.workout.entity.ExerciseEntity;
 import com.hcproj.healthcareprojectbackend.workout.repository.ExerciseRepository;
 import com.hcproj.healthcareprojectbackend.workout.dto.response.ExerciseListResponseDTO;
+import com.hcproj.healthcareprojectbackend.workout.dto.request.ExerciseCreateRequestDTO;
+import com.hcproj.healthcareprojectbackend.workout.dto.response.ExerciseCreateResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,6 +116,31 @@ public class ExerciseService {
                 : null;
 
         return new ExerciseListResponseDTO(items, nextCursor, hasNext);
+    }
+    /**
+     * 운동 등록 (관리자 전용)
+     */
+    @Transactional
+    public ExerciseCreateResponseDTO createExercise(ExerciseCreateRequestDTO request) {
+        ExerciseEntity exercise = ExerciseEntity.builder()
+                .name(request.name())
+                .bodyPart(request.bodyPart())
+                .difficulty(request.difficulty())
+                .imageUrl(request.imageUrl())
+                .description(request.description())
+                .precautions(request.precautions())
+                .youtubeUrl(request.youtubeUrl())
+                .isActive(request.isActive())
+                .build();
+
+        ExerciseEntity saved = exerciseRepository.save(exercise);
+
+        return ExerciseCreateResponseDTO.builder()
+                .exerciseId(saved.getExerciseId())
+                .name(saved.getName())
+                .isActive(saved.getIsActive())
+                .createdAt(saved.getCreatedAt())
+                .build();
     }
 }
 
