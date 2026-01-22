@@ -32,29 +32,49 @@ public class PtRoomService {
 
     @Transactional
     public PtRoomDetailResponseDTO createRoom(Long userId, PtRoomCreateRequestDTO request) {
+        // 1. 유저 검증
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        // 2. 입력값 검증
         if (request.roomType() == PtRoomType.RESERVED && request.scheduledAt() == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         String entryCode = Boolean.TRUE.equals(request.isPrivate()) ? generateEntryCode() : null;
-
         PtRoomStatus initialStatus = (request.roomType() == PtRoomType.RESERVED) ? PtRoomStatus.SCHEDULED : PtRoomStatus.LIVE;
 
-        PtRoomEntity ptRoom = PtRoomEntity.builder()
-                .trainerId(userId).title(request.title()).description(request.description())
-                .roomType(request.roomType()).scheduledStartAt(request.scheduledAt())
-                .maxParticipants(request.maxParticipants()).isPrivate(request.isPrivate())
-                .entryCode(entryCode).status(initialStatus).build();
+        // 3. 사용 가능한 빈 Janus Key 조회 (30000 ~ 39999)
+        // 삭제/종료된 방의 키도 재사용 가능
+        String availableKey = ptRoomRepository.findFirstAvailableJanusKey()
+                .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_FULL)); // 가용 범위 초과 시 에러
 
+        // 4. Entity 생성
+        PtRoomEntity ptRoom = PtRoomEntity.builder()
+                .trainerId(userId)
+                .title(request.title())
+                .description(request.description())
+                .roomType(request.roomType())
+                .scheduledStartAt(request.scheduledAt())
+                .maxParticipants(request.maxParticipants())
+                .isPrivate(request.isPrivate())
+                .entryCode(entryCode)
+                .status(initialStatus)
+                .build();
+
+        // 5. 키 할당 (Setter 대신 비즈니스 메서드 사용)
+        ptRoom.assignJanusKey(availableKey);
+
+        // 6. 저장 (키가 할당된 상태로 저장됨)
         PtRoomEntity savedRoom = ptRoomRepository.save(ptRoom);
 
+        // 7. 참여자 등록
         PtRoomParticipantEntity participant = PtRoomParticipantEntity.builder()
-                .ptRoomId(savedRoom.getPtRoomId()).userId(userId)
+                .ptRoomId(savedRoom.getPtRoomId())
+                .userId(userId)
                 .status(PtParticipantStatus.JOINED)
-                .joinedAt(Instant.now()).build();
+                .joinedAt(Instant.now())
+                .build();
 
         ptRoomParticipantRepository.save(participant);
 
@@ -117,7 +137,7 @@ public class PtRoomService {
                 .isPrivate(room.getIsPrivate())
                 .roomType(room.getRoomType())
                 .status(room.getStatus())
-                .janusRoomKey(room.getJanusRoomKey())
+                .janusRoomKey(room.getJanusRoomKey()) // 재사용된 키가 반환됨
                 .maxParticipants(room.getMaxParticipants())
                 .participants(new PtRoomDetailResponseDTO.ParticipantsDTO(1, List.of(participantUser)))
                 .build();

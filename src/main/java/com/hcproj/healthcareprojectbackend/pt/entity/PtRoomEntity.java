@@ -67,4 +67,8 @@ public class PtRoomEntity extends BaseTimeEntity {
         }
         this.status = PtRoomStatus.ENDED;
     }
+
+    public void assignJanusKey(String janusRoomKey) {
+        this.janusRoomKey = janusRoomKey;
+    }
 }
