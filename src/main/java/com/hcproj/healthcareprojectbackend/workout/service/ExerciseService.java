@@ -106,7 +106,8 @@ public class ExerciseService {
                         entity.getExerciseId(),
                         entity.getName(),
                         entity.getImageUrl(),
-                        entity.getBodyPart()
+                        entity.getBodyPart(),
+                        entity.getDifficulty()
                 ))
                 .toList();
 
