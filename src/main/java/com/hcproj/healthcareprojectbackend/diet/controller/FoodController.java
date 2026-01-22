@@ -2,9 +2,15 @@ package com.hcproj.healthcareprojectbackend.diet.controller;
 
 import com.hcproj.healthcareprojectbackend.diet.dto.response.FoodDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.diet.dto.response.FoodListResponseDTO;
+import com.hcproj.healthcareprojectbackend.global.security.annotation.AdminOnly;
+import com.hcproj.healthcareprojectbackend.diet.dto.request.FoodCreateRequestDTO;
+import com.hcproj.healthcareprojectbackend.diet.dto.response.FoodCreateResponseDTO;
 import com.hcproj.healthcareprojectbackend.diet.service.FoodService;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,5 +51,16 @@ public class FoodController {
     ) {
         FoodDetailResponseDTO response = foodService.getFoodDetail(foodId);
         return ApiResponse.ok(response);
+    }
+    /**
+     * 음식 등록 API (관리자 전용)
+     * POST /api/foods
+     */
+    @AdminOnly
+    @PostMapping
+    public ApiResponse<FoodCreateResponseDTO> createFood(
+            @Valid @RequestBody FoodCreateRequestDTO request
+    ) {
+        return ApiResponse.created(foodService.createFood(request));
     }
 }
