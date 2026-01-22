@@ -25,6 +25,7 @@ public class PtRoomService {
     private final PtRoomRepository ptRoomRepository;
     private final PtRoomParticipantRepository ptRoomParticipantRepository;
     private final UserRepository userRepository;
+    private final PtJanusRoomKeyService ptJanusRoomKeyService;
 
     private static final String CHAR_POOL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int CODE_LENGTH = 6;
@@ -32,79 +33,92 @@ public class PtRoomService {
 
     @Transactional
     public PtRoomDetailResponseDTO createRoom(Long userId, PtRoomCreateRequestDTO request) {
-        // 1. 유저 검증
-        UserEntity user = userRepository.findById(userId)
+        UserEntity trainer = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 2. 입력값 검증
         if (request.roomType() == PtRoomType.RESERVED && request.scheduledAt() == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         String entryCode = Boolean.TRUE.equals(request.isPrivate()) ? generateEntryCode() : null;
-        PtRoomStatus initialStatus = (request.roomType() == PtRoomType.RESERVED) ? PtRoomStatus.SCHEDULED : PtRoomStatus.LIVE;
 
-        // 3. 빈 키 조회
-        String availableKey = ptRoomRepository.findFirstAvailableJanusKey()
-                .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_FULL));
+        PtRoomStatus initialStatus = (request.roomType() == PtRoomType.RESERVED)
+                ? PtRoomStatus.SCHEDULED
+                : PtRoomStatus.LIVE;
 
-        // 4. Entity 생성
-        PtRoomEntity ptRoom = PtRoomEntity.builder()
+        Instant startedAt = (initialStatus == PtRoomStatus.LIVE) ? Instant.now() : null;
+
+        PtRoomEntity room = PtRoomEntity.builder()
                 .trainerId(userId)
                 .title(request.title())
                 .description(request.description())
                 .roomType(request.roomType())
                 .scheduledStartAt(request.scheduledAt())
+                .startedAt(startedAt)
                 .maxParticipants(request.maxParticipants())
                 .isPrivate(request.isPrivate())
                 .entryCode(entryCode)
                 .status(initialStatus)
                 .build();
 
-        // 5. 키 할당
-        ptRoom.assignJanusKey(availableKey);
+        PtRoomEntity savedRoom = ptRoomRepository.save(room);
 
-        // 6. 저장
-        PtRoomEntity savedRoom = ptRoomRepository.save(ptRoom);
-
-        // 7. [수정됨] 참여자 등록 (LIVE 상태일 때만 트레이너 자동 참여)
-        // 예약(SCHEDULED) 상태일 때는 트레이너도 아직 입장하지 않은 상태로 둠
-        if (initialStatus == PtRoomStatus.LIVE) {
-            PtRoomParticipantEntity participant = PtRoomParticipantEntity.builder()
-                    .ptRoomId(savedRoom.getPtRoomId())
-                    .userId(userId)
-                    .status(PtParticipantStatus.JOINED)
-                    .joinedAt(Instant.now())
-                    .build();
-
-            ptRoomParticipantRepository.save(participant);
+        // ✅ LIVE 생성이면 키 할당 + 트레이너 참가 보장
+        Integer janusKey = null;
+        if (savedRoom.getStatus() == PtRoomStatus.LIVE) {
+            janusKey = ptJanusRoomKeyService.allocate(savedRoom.getPtRoomId()).getRoomKey();
+            ensureTrainerJoined(savedRoom.getPtRoomId(), userId);
         }
 
-        return assembleCreateResponse(savedRoom, user, entryCode);
+        return assembleCreateResponse(savedRoom, trainer, entryCode, janusKey);
     }
 
     @Transactional
     public void joinRoom(Long ptRoomId, Long userId, PtRoomEntryRequestDTO request) {
-        PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
+        // ✅ 방 row 잠금 (정원 체크 동시성 방지)
+        PtRoomEntity room = ptRoomRepository.findByIdForUpdate(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
+        // 정책: LIVE만 join 허용
+        if (room.getStatus() != PtRoomStatus.LIVE) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
+        // private 코드 검증
         if (Boolean.TRUE.equals(room.getIsPrivate())) {
-            if (request.entryCode() == null || !request.entryCode().equals(room.getEntryCode())) {
+            if (request == null || request.entryCode() == null || !request.entryCode().equals(room.getEntryCode())) {
                 throw new BusinessException(ErrorCode.INVALID_ENTRY_CODE);
             }
         }
 
-        PtRoomParticipantEntity participant = ptRoomParticipantRepository.findByPtRoomIdAndUserId(ptRoomId, userId)
-                .orElse(PtRoomParticipantEntity.builder()
-                        .ptRoomId(ptRoomId)
-                        .userId(userId)
-                        .status(PtParticipantStatus.SCHEDULED)
-                        .joinedAt(Instant.now())
-                        .build());
+        // 멱등: 이미 JOINED면 성공
+        PtRoomParticipantEntity existing = ptRoomParticipantRepository.findByPtRoomIdAndUserId(ptRoomId, userId)
+                .orElse(null);
+        if (existing != null && existing.getStatus() == PtParticipantStatus.JOINED) {
+            return;
+        }
 
-        participant.join();
+        // ✅ 정원 체크 (락 잡힌 상태에서)
+        long joinedCount = ptRoomParticipantRepository.countByPtRoomIdAndStatus(ptRoomId, PtParticipantStatus.JOINED);
+        Integer max = room.getMaxParticipants();
+        if (max != null && joinedCount >= max) {
+            throw new BusinessException(ErrorCode.ROOM_FULL);
+        }
 
-        ptRoomParticipantRepository.save(participant);
+        // 참가 처리
+        if (existing == null) {
+            PtRoomParticipantEntity participant = PtRoomParticipantEntity.builder()
+                    .ptRoomId(ptRoomId)
+                    .userId(userId)
+                    .status(PtParticipantStatus.JOINED)
+                    .joinedAt(Instant.now())
+                    .build();
+            ptRoomParticipantRepository.save(participant);
+            return;
+        }
+
+        existing.join(); // LEFT였다면 재입장
+        ptRoomParticipantRepository.save(existing);
     }
 
     @Transactional
@@ -113,26 +127,52 @@ public class PtRoomService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         participant.exit();
-
         ptRoomParticipantRepository.save(participant);
     }
 
-    // 방 삭제 (Soft Delete + Janus Key Hard Delete)
     @Transactional
     public void deleteRoom(Long ptRoomId, Long userId) {
-        PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
+        // 삭제도 방 row 잠그면 “삭제 중 join” 같은 경쟁에 더 강함
+        PtRoomEntity room = ptRoomRepository.findByIdForUpdate(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
-        // 1. 권한 확인
         if (!room.getTrainerId().equals(userId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        // 2. 방 상태 취소 (캘린더 히스토리용 데이터 보존)
-        room.cancel();
+        room.cancel(); // CANCELLED + markDeleted()
 
-        // 3. Janus Key 반납 (NULL 처리 -> 30000번대 번호 즉시 재사용 가능)
-        room.releaseJanusKey();
+        // JOINED → LEFT 정리
+        List<PtRoomParticipantEntity> participants = ptRoomParticipantRepository.findAllByPtRoomId(ptRoomId);
+        for (PtRoomParticipantEntity p : participants) {
+            if (p.getStatus() == PtParticipantStatus.JOINED) {
+                p.exit();
+            }
+        }
+
+        // ✅ 키 반납 (멱등)
+        ptJanusRoomKeyService.releaseByPtRoomId(ptRoomId);
+    }
+
+    private void ensureTrainerJoined(Long ptRoomId, Long trainerId) {
+        PtRoomParticipantEntity participant = ptRoomParticipantRepository.findByPtRoomIdAndUserId(ptRoomId, trainerId)
+                .orElse(null);
+
+        if (participant == null) {
+            participant = PtRoomParticipantEntity.builder()
+                    .ptRoomId(ptRoomId)
+                    .userId(trainerId)
+                    .status(PtParticipantStatus.JOINED)
+                    .joinedAt(Instant.now())
+                    .build();
+            ptRoomParticipantRepository.save(participant);
+            return;
+        }
+
+        if (participant.getStatus() != PtParticipantStatus.JOINED) {
+            participant.join();
+            ptRoomParticipantRepository.save(participant);
+        }
     }
 
     private String generateEntryCode() {
@@ -143,15 +183,18 @@ public class PtRoomService {
         return sb.toString();
     }
 
-    private PtRoomDetailResponseDTO assembleCreateResponse(PtRoomEntity room, UserEntity trainer, String entryCode) {
+    private PtRoomDetailResponseDTO assembleCreateResponse(
+            PtRoomEntity room,
+            UserEntity trainer,
+            String entryCode,
+            Integer janusKey
+    ) {
         var trainerDTO = new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null);
-        var participantUser = new PtRoomDetailResponseDTO.UserDTO(trainer.getNickname(), trainer.getHandle());
 
-        // [수정됨] 예약(SCHEDULED) 상태일 때는 참여자 목록을 비워둠
-        // LIVE 상태일 때만 트레이너가 포함됨
-        List<PtRoomDetailResponseDTO.UserDTO> participantsList = (room.getStatus() == PtRoomStatus.LIVE)
-                ? List.of(participantUser)
-                : List.of();
+        List<PtRoomDetailResponseDTO.UserDTO> participantsList =
+                (room.getStatus() == PtRoomStatus.LIVE)
+                        ? List.of(new PtRoomDetailResponseDTO.UserDTO(trainer.getNickname(), trainer.getHandle()))
+                        : List.of();
 
         return PtRoomDetailResponseDTO.builder()
                 .ptRoomId(room.getPtRoomId())
@@ -163,9 +206,8 @@ public class PtRoomService {
                 .isPrivate(room.getIsPrivate())
                 .roomType(room.getRoomType())
                 .status(room.getStatus())
-                .janusRoomKey(room.getJanusRoomKey())
+                .janusRoomKey(janusKey == null ? null : String.valueOf(janusKey))
                 .maxParticipants(room.getMaxParticipants())
-                // [수정됨] 위에서 만든 리스트 사용
                 .participants(new PtRoomDetailResponseDTO.ParticipantsDTO(participantsList.size(), participantsList))
                 .build();
     }
