@@ -26,4 +26,6 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
     );
 
     List<PtRoomEntity> findAllByTrainerId(Long trainerId);
+    //여러 방 ID로 방 정보 일괄 조회 (캘린더 PT 정보용)
+    List<PtRoomEntity> findAllByPtRoomIdIn(List<Long> ptRoomIds);
 }
