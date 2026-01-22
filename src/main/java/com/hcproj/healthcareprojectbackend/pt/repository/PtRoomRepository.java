@@ -1,15 +1,12 @@
 package com.hcproj.healthcareprojectbackend.pt.repository;
 
-import com.hcproj.healthcareprojectbackend.pt.dto.internal.VideoPtDailyRow;
-import com.hcproj.healthcareprojectbackend.pt.entity.PtReservationStatus;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomEntity;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,67 +28,11 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
 
     List<PtRoomEntity> findAllByTrainerId(Long trainerId);
 
-    // 30000 ~ 39999 사이 빈 키(재사용 가능) 찾기
-    @Query(value = """
-        SELECT CAST(x AS VARCHAR)
-        FROM SYSTEM_RANGE(30000, 39999)
-        WHERE CAST(x AS VARCHAR) NOT IN (
-            SELECT janus_room_key
-            FROM pt_rooms
-            WHERE janus_room_key IS NOT NULL
-            AND status IN ('1', '0')
-        )
-        FETCH FIRST 1 ROWS ONLY
-        """, nativeQuery = true)
-    Optional<String> findFirstAvailableJanusKey();
-
-    //여러 방 ID로 방 정보 일괄 조회 (캘린더 PT 정보용)
+    // 여러 방 ID로 방 정보 일괄 조회 (캘린더 PT 정보용)
     List<PtRoomEntity> findAllByPtRoomIdIn(List<Long> ptRoomIds);
 
-    /**
-     * 추가: 특정 유저가 특정 상태로 예약한 방들 중,
-     * scheduledStartAt이 [startInclusive, endExclusive) 범위에 속하는 시작시각만 조회
-     * <p>
-     * - 엔티티 연관관계 없이도 cross join 형태로 JPQL 조인 가능
-     * - 달력 표시(존재여부) 목적이라 시작시각만 가져오면 됨
-     */
-    @Query("""
-        select r.scheduledStartAt
-        from PtRoomEntity r, PtReservationEntity res
-        where res.ptRoomId = r.ptRoomId
-          and res.userId = :userId
-          and res.status = :status
-          and r.scheduledStartAt is not null
-          and r.scheduledStartAt >= :startInclusive
-          and r.scheduledStartAt <  :endExclusive
-    """)
-    List<Instant> findReservedStartAtsInRange(
-            @Param("userId") Long userId,
-            @Param("status") PtReservationStatus status,
-            @Param("startInclusive") Instant startInclusive,
-            @Param("endExclusive") Instant endExclusive
-    );
-
-    @Query("""
-    select new com.hcproj.healthcareprojectbackend.pt.dto.internal.VideoPtDailyRow(
-        u.nickname,
-        r.scheduledStartAt
-    )
-    from PtRoomEntity r, PtReservationEntity res, UserEntity u
-    where res.ptRoomId = r.ptRoomId
-      and res.userId = :userId
-      and res.status = :status
-      and u.id = r.trainerId
-      and r.scheduledStartAt is not null
-      and r.scheduledStartAt >= :startInclusive
-      and r.scheduledStartAt <  :endExclusive
-    order by r.scheduledStartAt asc
-""")
-    List<VideoPtDailyRow> findDailyVideoPtRows(
-            @Param("userId") Long userId,
-            @Param("status") PtReservationStatus status,
-            @Param("startInclusive") Instant startInclusive,
-            @Param("endExclusive") Instant endExclusive
-    );
-
+    // ✅ 비관적 락: 방 row를 SELECT ... FOR UPDATE
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM PtRoomEntity r WHERE r.ptRoomId = :ptRoomId")
+    Optional<PtRoomEntity> findByIdForUpdate(@Param("ptRoomId") Long ptRoomId);
 }

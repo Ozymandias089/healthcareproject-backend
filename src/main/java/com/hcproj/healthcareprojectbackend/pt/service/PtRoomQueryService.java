@@ -8,7 +8,7 @@ import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseD
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomListResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomParticipantsResponseDTO;
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
-import com.hcproj.healthcareprojectbackend.pt.repository.PtReservationRepository;
+import com.hcproj.healthcareprojectbackend.pt.repository.PtJanusRoomKeyRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,13 +26,9 @@ public class PtRoomQueryService {
 
     private final PtRoomRepository ptRoomRepository;
     private final PtRoomParticipantRepository ptRoomParticipantRepository;
-    private final PtReservationRepository ptReservationRepository;
+    private final PtJanusRoomKeyRepository ptJanusRoomKeyRepository;
     private final UserRepository userRepository;
 
-    /**
-     * 화상PT 방 상세 조회
-     * [수정됨] currentUserId 파라미터 추가 -> 트레이너 본인 확인용
-     */
     public PtRoomDetailResponseDTO getPtRoomDetail(Long ptRoomId, Long currentUserId) {
         PtRoomEntity ptRoom = ptRoomRepository.findById(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -40,21 +36,26 @@ public class PtRoomQueryService {
         UserEntity trainer = userRepository.findById(ptRoom.getTrainerId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        List<PtRoomParticipantEntity> activeParticipants = ptRoomParticipantRepository.findAllByPtRoomId(ptRoomId)
-                .stream()
-                .filter(p -> p.getStatus() == PtParticipantStatus.JOINED) // 사람 상태는 JOINED
-                .toList();
+        // JOINED 참가자만
+        List<PtRoomParticipantEntity> activeParticipants = ptRoomParticipantRepository
+                .findAllByPtRoomIdAndStatusOrderByJoinedAtAsc(ptRoomId, PtParticipantStatus.JOINED);
 
         List<Long> userIds = activeParticipants.stream().map(PtRoomParticipantEntity::getUserId).toList();
         List<PtRoomDetailResponseDTO.UserDTO> userDTOs = userRepository.findAllById(userIds).stream()
                 .map(u -> new PtRoomDetailResponseDTO.UserDTO(u.getNickname(), u.getHandle()))
                 .toList();
 
-        // [수정 로직] 트레이너 본인일 때만 entryCode 노출, 아니면 null
+        // 트레이너 본인일 때만 entryCode 노출
         String entryCode = null;
         if (currentUserId != null && currentUserId.equals(ptRoom.getTrainerId())) {
             entryCode = ptRoom.getEntryCode();
         }
+
+        // janus 키 조회
+        String janusRoomKey = ptJanusRoomKeyRepository.findByPtRoomId(ptRoomId)
+                .map(k -> String.valueOf(k.getRoomKey()))
+                .orElse(null);
+
 
         return PtRoomDetailResponseDTO.builder()
                 .ptRoomId(ptRoom.getPtRoomId())
@@ -62,36 +63,31 @@ public class PtRoomQueryService {
                 .description(ptRoom.getDescription())
                 .scheduledAt(ptRoom.getScheduledStartAt())
                 .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null))
-                .entryCode(entryCode) // [수정] 조건부 반환
+                .entryCode(entryCode)
                 .isPrivate(ptRoom.getIsPrivate())
                 .roomType(ptRoom.getRoomType())
                 .status(ptRoom.getStatus())
-                .janusRoomKey(ptRoom.getJanusRoomKey())
+                .janusRoomKey(janusRoomKey)
                 .maxParticipants(ptRoom.getMaxParticipants())
                 .participants(new PtRoomDetailResponseDTO.ParticipantsDTO(userDTOs.size(), userDTOs))
                 .build();
     }
 
-    /*화상PT 참여 인원 조회 */
     public PtRoomParticipantsResponseDTO getPtRoomParticipants(Long ptRoomId, Long userId) {
-        // 1. 방 존재 확인
         PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
-        // 2. 권한 체크: 예약된 상태(REQUESTED)여야 함 (트레이너 포함)
-        boolean isReserved = ptReservationRepository.existsByPtRoomIdAndUserIdAndStatus(
-                ptRoomId, userId, PtReservationStatus.REQUESTED
-        );
+        // ✅ 권한: 트레이너 OR 현재 JOINED인 유저만
+        boolean isTrainer = room.getTrainerId().equals(userId);
+        boolean isJoined = ptRoomParticipantRepository.existsByPtRoomIdAndUserIdAndStatus(ptRoomId, userId, PtParticipantStatus.JOINED);
 
-        if (!isReserved) {
+        if (!isTrainer && !isJoined) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        // 3. 참여 중(JOINED)인 인원 조회 (입장 순)
         List<PtRoomParticipantEntity> participants = ptRoomParticipantRepository
                 .findAllByPtRoomIdAndStatusOrderByJoinedAtAsc(ptRoomId, PtParticipantStatus.JOINED);
 
-        // 4. 유저 정보 조회 및 DTO 매핑
         List<Long> userIds = participants.stream().map(PtRoomParticipantEntity::getUserId).toList();
         Map<Long, UserEntity> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(UserEntity::getId, u -> u));
@@ -101,7 +97,6 @@ public class PtRoomQueryService {
                     UserEntity u = userMap.get(p.getUserId());
                     if (u == null) return null;
 
-                    // 방장(트레이너)인지 확인하여 Role 설정
                     String role = room.getTrainerId().equals(u.getId()) ? "TRAINER" : "USER";
 
                     return PtRoomParticipantsResponseDTO.UserDTO.builder()
@@ -121,7 +116,6 @@ public class PtRoomQueryService {
                 .build();
     }
 
-    /*화상PT 방 리스트 조회*/
     public PtRoomListResponseDTO getPtRoomList(String tab, String q, Long cursorId, int size, Long meId) {
         List<PtRoomStatus> statuses = null;
         Long trainerIdFilter = null;
@@ -130,11 +124,13 @@ public class PtRoomQueryService {
         switch (tab.toUpperCase()) {
             case "LIVE" -> statuses = List.of(PtRoomStatus.LIVE);
             case "RESERVED" -> statuses = List.of(PtRoomStatus.SCHEDULED);
-            case "MY_RESERVATIONS" -> {
+            case "MY_JOINED" -> {
                 if (meId == null) throw new BusinessException(ErrorCode.UNAUTHORIZED);
-                roomIdFilter = ptReservationRepository.findAllByUserId(meId).stream()
-                        .filter(r -> r.getStatus() == PtReservationStatus.REQUESTED)
-                        .map(PtReservationEntity::getPtRoomId).toList();
+                roomIdFilter = ptRoomParticipantRepository.findAllByUserId(meId).stream()
+                        .filter(p -> p.getStatus() == PtParticipantStatus.JOINED || p.getStatus() == PtParticipantStatus.LEFT)
+                        .map(PtRoomParticipantEntity::getPtRoomId)
+                        .distinct()
+                        .toList();
                 if (roomIdFilter.isEmpty()) return emptyResponse(size);
             }
             case "MY_PT" -> {
@@ -144,31 +140,42 @@ public class PtRoomQueryService {
             default -> statuses = List.of(PtRoomStatus.LIVE, PtRoomStatus.SCHEDULED);
         }
 
-        List<PtRoomEntity> rooms = ptRoomRepository.findPtRoomsByFilters(cursorId, statuses, trainerIdFilter, roomIdFilter, PageRequest.of(0, size + 1));
+        // q 검색은 아직 미적용(원하면 title like 조건 추가)
+        List<PtRoomEntity> rooms = ptRoomRepository.findPtRoomsByFilters(
+                cursorId, statuses, trainerIdFilter, roomIdFilter, PageRequest.of(0, size + 1)
+        );
 
         boolean hasNext = rooms.size() > size;
         if (hasNext) rooms.remove(size);
-        Long nextCursorId = rooms.isEmpty() ? null : rooms.get(rooms.size() - 1).getPtRoomId();
+        Long nextCursorId = rooms.isEmpty() ? null : rooms.getLast().getPtRoomId();
 
         return assembleListResponse(rooms, nextCursorId, hasNext, size);
     }
 
     private PtRoomListResponseDTO assembleListResponse(List<PtRoomEntity> rooms, Long nextCursorId, boolean hasNext, int size) {
         Set<Long> trainerIds = rooms.stream().map(PtRoomEntity::getTrainerId).collect(Collectors.toSet());
-        Map<Long, UserEntity> userMap = userRepository.findAllById(trainerIds).stream().collect(Collectors.toMap(UserEntity::getId, u -> u));
+        Map<Long, UserEntity> userMap = userRepository.findAllById(trainerIds).stream()
+                .collect(Collectors.toMap(UserEntity::getId, u -> u));
 
+        // janus 키를 배치로 가져오고 싶으면 roomIds로 한 번에 조회하는 메서드 추가 추천
         List<PtRoomListResponseDTO.ItemDTO> items = rooms.stream().map(r -> {
             UserEntity trainer = userMap.get(r.getTrainerId());
-            int currentCount = ptRoomParticipantRepository.findAllByPtRoomId(r.getPtRoomId()).size();
+
+            int joinedCount = (int) ptRoomParticipantRepository.countByPtRoomIdAndStatus(r.getPtRoomId(), PtParticipantStatus.JOINED);
 
             return PtRoomListResponseDTO.ItemDTO.builder()
-                    .ptRoomId(r.getPtRoomId()).title(r.getTitle()).roomType(r.getRoomType())
-                    .status(r.getStatus()).scheduledAt(r.getScheduledStartAt())
+                    .ptRoomId(r.getPtRoomId())
+                    .title(r.getTitle())
+                    .roomType(r.getRoomType())
+                    .status(r.getStatus())
+                    .scheduledAt(r.getScheduledStartAt())
                     .isPrivate(r.getIsPrivate())
                     .trainer(new PtRoomListResponseDTO.TrainerDTO(
                             trainer != null ? trainer.getNickname() : "알수없음",
-                            trainer != null ? trainer.getHandle() : "unknown", null))
-                    .participants(new PtRoomListResponseDTO.ParticipantsDTO(currentCount, r.getMaxParticipants()))
+                            trainer != null ? trainer.getHandle() : "unknown",
+                            null
+                    ))
+                    .participants(new PtRoomListResponseDTO.ParticipantsDTO(joinedCount, r.getMaxParticipants()))
                     .build();
         }).toList();
 
