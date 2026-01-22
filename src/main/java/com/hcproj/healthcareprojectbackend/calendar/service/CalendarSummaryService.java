@@ -1,8 +1,7 @@
 package com.hcproj.healthcareprojectbackend.calendar.service;
 
-import com.hcproj.healthcareprojectbackend.calendar.dto.response.DailyDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.calendar.dto.response.CalendarRangeResponseDTO;
-import com.hcproj.healthcareprojectbackend.calendar.dto.response.CalendarRangeResponseDTO.*;
+import com.hcproj.healthcareprojectbackend.calendar.dto.response.DailyDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.calendar.repository.CalendarDayNoteRepository;
 import com.hcproj.healthcareprojectbackend.diet.entity.DietDayEntity;
 import com.hcproj.healthcareprojectbackend.diet.entity.DietMealEntity;
@@ -12,7 +11,8 @@ import com.hcproj.healthcareprojectbackend.diet.repository.DietDayRepository;
 import com.hcproj.healthcareprojectbackend.diet.repository.DietMealItemRepository;
 import com.hcproj.healthcareprojectbackend.diet.repository.DietMealRepository;
 import com.hcproj.healthcareprojectbackend.diet.repository.FoodRepository;
-import com.hcproj.healthcareprojectbackend.pt.entity.PtReservationStatus;
+import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomStatus;
+import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomType;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
 import com.hcproj.healthcareprojectbackend.workout.entity.ExerciseEntity;
 import com.hcproj.healthcareprojectbackend.workout.entity.WorkoutDayEntity;
@@ -29,6 +29,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.hcproj.healthcareprojectbackend.calendar.dto.response.CalendarRangeResponseDTO.*;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +51,23 @@ public class CalendarSummaryService {
     private final CalendarDayNoteRepository calendarDayNoteRepository;
 
     private static final ZoneId ZONE_ID = ZoneId.of("Asia/Seoul");
+
+    // ==================== Range Validation ====================
+
+    private static final int MAX_RANGE_DAYS = 35;
+
+    private void validateRange(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("startDate/endDate must not be null");
+        }
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate must be <= endDate");
+        }
+        long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        if (days > MAX_RANGE_DAYS) {
+            throw new IllegalArgumentException("date range too large: " + days + " days");
+        }
+    }
 
     /**
      * ✅ 주간/월간 범용 캘린더 상태 조회
@@ -101,28 +120,7 @@ public class CalendarSummaryService {
                 .build();
     }
 
-    // ==================== Range Validation ====================
-
-    /**
-     * 범용(주/월)이라도 무제한 범위는 위험.
-     * UI 정책에 맞춰 MAX_RANGE_DAYS 조절해.
-     */
-    private static final int MAX_RANGE_DAYS = 35;
-
-    private void validateRange(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException("startDate/endDate must not be null");
-        }
-        if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("startDate must be <= endDate");
-        }
-        long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
-        if (days > MAX_RANGE_DAYS) {
-            throw new IllegalArgumentException("date range too large: " + days + " days");
-        }
-    }
-
-    // ==================== Memo (Already optimal) ====================
+    // ==================== Memo ====================
 
     private Map<LocalDate, Boolean> getMemoExistenceMap(Long userId, LocalDate startDate, LocalDate endDate) {
         List<LocalDate> dates = calendarDayNoteRepository.findNoteDatesInRange(userId, startDate, endDate);
@@ -146,7 +144,6 @@ public class CalendarSummaryService {
         List<WorkoutItemEntity> items = workoutItemRepository.findAllByWorkoutDayIdIn(dayIds);
         if (items.isEmpty()) return Collections.emptyMap();
 
-        // workoutDayId별 total/checked 집계
         Map<Long, long[]> agg = new HashMap<>(); // [0]=total, [1]=checked
         for (WorkoutItemEntity item : items) {
             Long dayId = item.getWorkoutDayId();
@@ -185,21 +182,17 @@ public class CalendarSummaryService {
 
         List<Long> dietDayIds = new ArrayList<>(dayIdToDate.keySet());
 
-        // dayId IN (...) 으로 meals 한 번에
         List<DietMealEntity> meals = dietMealRepository.findAllByDietDayIdInOrderByDietDayIdAscSortOrderAsc(dietDayIds);
         if (meals.isEmpty()) return Collections.emptyMap();
 
         List<Long> mealIds = meals.stream().map(DietMealEntity::getDietMealId).toList();
 
-        // mealId IN (...) 으로 items 한 번에
         List<DietMealItemEntity> items = dietMealItemRepository.findAllByDietMealIdIn(mealIds);
         if (items.isEmpty()) return Collections.emptyMap();
 
-        // mealId -> dietDayId
         Map<Long, Long> mealIdToDietDayId = meals.stream()
                 .collect(Collectors.toMap(DietMealEntity::getDietMealId, DietMealEntity::getDietDayId));
 
-        // dietDayId별 total/checked 집계
         Map<Long, long[]> agg = new HashMap<>(); // [0]=total, [1]=checked
         for (DietMealItemEntity item : items) {
             Long dietDayId = mealIdToDietDayId.get(item.getDietMealId());
@@ -227,16 +220,17 @@ public class CalendarSummaryService {
         return result;
     }
 
-    // ==================== Video PT ====================
+    // ==================== Video PT (예약 제거 대응) ====================
 
     private Map<LocalDate, VideoPtStatus> getVideoPtStatusMap(Long userId, LocalDate startDate, LocalDate endDate) {
-        // LocalDate 범위를 Instant 범위로 변환: [start 00:00, end+1 00:00)
         Instant startInclusive = startDate.atStartOfDay(ZONE_ID).toInstant();
         Instant endExclusive = endDate.plusDays(1).atStartOfDay(ZONE_ID).toInstant();
 
-        List<Instant> startAts = ptRoomRepository.findReservedStartAtsInRange(
+        // 트레이너 캘린더: 내가 만든 RESERVED + SCHEDULED 세션이 있으면 표시
+        List<Instant> startAts = ptRoomRepository.findReservedStartAtsInRangeForTrainer(
                 userId,
-                PtReservationStatus.REQUESTED,
+                PtRoomType.RESERVED,
+                List.of(PtRoomStatus.SCHEDULED),
                 startInclusive,
                 endExclusive
         );
@@ -246,26 +240,32 @@ public class CalendarSummaryService {
         Map<LocalDate, VideoPtStatus> map = new HashMap<>();
         for (Instant startAt : startAts) {
             if (startAt == null) continue;
-            LocalDate date = startAt.atZone(ZONE_ID).toLocalDate();
-            map.put(date, VideoPtStatus.HAS_RESERVATION);
+            LocalDate d = startAt.atZone(ZONE_ID).toLocalDate();
+            map.put(d, VideoPtStatus.HAS_RESERVATION); // 이름 유지(의미만 "예정 세션 존재")
         }
         return map;
     }
 
-    // ==================== Daily Detail (keep as-is for now) ====================
+    // ==================== Daily Detail ====================
 
     private DailyDetailResponseDTO.WorkoutSummaryDTO getWorkoutSummary(Long userId, LocalDate date) {
         return workoutDayRepository.findByUserIdAndLogDate(userId, date)
                 .map(day -> {
-                    List<WorkoutItemEntity> items = workoutItemRepository.findAllByWorkoutDayIdOrderBySortOrderAsc(day.getWorkoutDayId());
+                    List<WorkoutItemEntity> items = workoutItemRepository
+                            .findAllByWorkoutDayIdOrderBySortOrderAsc(day.getWorkoutDayId());
                     if (items.isEmpty()) {
                         return DailyDetailResponseDTO.WorkoutSummaryDTO.builder().exists(false).build();
                     }
 
-                    int totalMin = items.stream().mapToInt(i -> i.getDurationMinutes() != null ? i.getDurationMinutes() : 0).sum();
+                    int totalMin = items.stream()
+                            .mapToInt(i -> i.getDurationMinutes() != null ? i.getDurationMinutes() : 0)
+                            .sum();
+
                     List<String> names = exerciseRepository.findAllById(
-                            items.stream().limit(2).map(WorkoutItemEntity::getExerciseId).toList()
-                    ).stream().map(ExerciseEntity::getName).toList();
+                                    items.stream().limit(2).map(WorkoutItemEntity::getExerciseId).toList()
+                            ).stream()
+                            .map(ExerciseEntity::getName)
+                            .toList();
 
                     String summary = (day.getTitle() != null ? day.getTitle() + " · " : "") + totalMin + "분";
 
@@ -292,8 +292,9 @@ public class CalendarSummaryService {
                     int totalCal = 0;
                     if (!items.isEmpty()) {
                         Map<Long, FoodEntity> foodMap = foodRepository.findAllById(
-                                items.stream().map(DietMealItemEntity::getFoodId).distinct().toList()
-                        ).stream().collect(Collectors.toMap(FoodEntity::getFoodId, f -> f));
+                                        items.stream().map(DietMealItemEntity::getFoodId).distinct().toList()
+                                ).stream()
+                                .collect(Collectors.toMap(FoodEntity::getFoodId, f -> f));
 
                         for (DietMealItemEntity item : items) {
                             FoodEntity food = foodMap.get(item.getFoodId());
@@ -313,9 +314,10 @@ public class CalendarSummaryService {
         Instant startInclusive = date.atStartOfDay(ZONE_ID).toInstant();
         Instant endExclusive = date.plusDays(1).atStartOfDay(ZONE_ID).toInstant();
 
-        var rows = ptRoomRepository.findDailyVideoPtRows(
+        var rows = ptRoomRepository.findDailyVideoPtRowsForTrainer(
                 userId,
-                PtReservationStatus.REQUESTED,
+                PtRoomType.RESERVED,
+                List.of(PtRoomStatus.SCHEDULED),
                 startInclusive,
                 endExclusive
         );
@@ -326,17 +328,14 @@ public class CalendarSummaryService {
                     .build();
         }
 
-        // 하루에 예약이 여러 개일 수 있음 → 정책 선택
-        // 1) 첫 예약만 표시
         var first = rows.getFirst();
-        String time = first.scheduledStartAt()
+
+        String time = first.getScheduledStartAt()
                 .atZone(ZONE_ID)
                 .toLocalTime()
                 .format(DateTimeFormatter.ofPattern("HH:mm"));
 
-        String summary = first.trainerNickname() + " · " + time;
-
-        // 2) 여러 개면 "+n" 표시하고 싶으면(선택)
+        String summary = first.getTitle() + " · " + time;
         if (rows.size() > 1) {
             summary += " 외 " + (rows.size() - 1) + "건";
         }
@@ -346,7 +345,6 @@ public class CalendarSummaryService {
                 .summary(summary)
                 .build();
     }
-
 
     private DailyDetailResponseDTO.MemoSummaryDTO getMemoSummary(Long userId, LocalDate date) {
         return calendarDayNoteRepository.findByUserIdAndNoteDate(userId, date)
