@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.TrainerPendingListResponseDTO;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.TrainerRejectResponseDTO;
-import com.hcproj.healthcareprojectbackend.admin.repository.AdminUserRepository;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
@@ -25,6 +24,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 public class AdminTrainerService {
 
     private final UserRepository userRepository;
-    private final AdminUserRepository adminUserRepository;
     private final TrainerInfoRepository trainerInfoRepository;
     private final ObjectMapper objectMapper; // [추가] JSON 변환을 위해 필요
 
@@ -47,7 +46,7 @@ public class AdminTrainerService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         trainerInfo.approve();
-        adminUserRepository.updateUserRole(handle, UserRole.TRAINER);
+        user.makeTrainer();
 
         return TrainerApproveResponseDTO.of(
                 user.getHandle(),
@@ -95,7 +94,7 @@ public class AdminTrainerService {
                             info.getCreatedAt()
                     );
                 })
-                .filter(dto -> dto != null)
+                .filter(Objects::nonNull)
                 .toList();
 
         return TrainerPendingListResponseDTO.builder()
