@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static com.hcproj.healthcareprojectbackend.global.util.UtilityProvider.normalizeEmail;
+
 /**
  * 인증/인가(Auth) 관련 유스케이스를 담당하는 서비스.
  *
@@ -79,7 +81,7 @@ public class AuthService {
 
         // 비밀번호는 평문 저장 금지 -> BCrypt 등으로 해시 처리
         UserEntity user = UserEntity.builder()
-                .email(request.email())
+                .email(normalizeEmail(request.email()))
                 .handle(handle)
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
@@ -104,7 +106,7 @@ public class AuthService {
      */
     @Transactional(readOnly = true)
     public EmailCheckResponseDTO checkEmailDuplicate(EmailCheckRequestDTO request) {
-        if (userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByEmail(normalizeEmail(request.email()))) {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
         }
         return new EmailCheckResponseDTO(true);
@@ -119,7 +121,7 @@ public class AuthService {
      */
     @Transactional(readOnly = true)
     public TokenResponseDTO login(LoginRequestDTO request) {
-        UserEntity user = userRepository.findByEmail(request.email())
+        UserEntity user = userRepository.findByEmail(normalizeEmail(request.email()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
         if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {

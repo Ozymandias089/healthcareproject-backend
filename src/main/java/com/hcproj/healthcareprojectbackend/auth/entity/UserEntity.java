@@ -46,6 +46,9 @@ public class UserEntity extends BaseTimeEntity {
     @Column(name = "profile_image_url", length = 2048)
     private String profileImageUrl;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
     public void changePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
     }
@@ -91,5 +94,15 @@ public class UserEntity extends BaseTimeEntity {
     public void demote() {
         if (this.role == UserRole.USER) return;
         this.role = UserRole.USER;
+    }
+
+    public void markVerified() {
+        if (emailVerified) return;
+        this.emailVerified = true;
+    }
+
+    public void markUnverified() {
+        if (!emailVerified) return;
+        this.emailVerified = false;
     }
 }
