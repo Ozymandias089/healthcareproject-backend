@@ -1,5 +1,6 @@
 package com.hcproj.healthcareprojectbackend.pt.repository;
 
+import com.hcproj.healthcareprojectbackend.pt.entity.PtParticipantStatus;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomEntity;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomStatus;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomType;
@@ -66,6 +67,29 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
             @Param("endExclusive") Instant endExclusive
     );
 
+    @Query("""
+    SELECT DISTINCT r.scheduledStartAt
+    FROM PtRoomEntity r
+    LEFT JOIN PtRoomParticipantEntity p
+           ON p.ptRoomId = r.ptRoomId
+          AND p.userId = :userId
+          AND p.status = :participantStatus
+    WHERE r.roomType = :roomType
+      AND r.scheduledStartAt >= :startInclusive
+      AND r.scheduledStartAt < :endExclusive
+      AND r.status IN :statuses
+      AND (r.trainerId = :userId OR p.ptRoomParticipantId IS NOT NULL)
+""")
+    List<Instant> findReservedStartAtsInRangeForUserCalendar(
+            @Param("userId") Long userId,
+            @Param("participantStatus") PtParticipantStatus participantStatus,
+            @Param("roomType") PtRoomType roomType,
+            @Param("statuses") List<PtRoomStatus> statuses,
+            @Param("startInclusive") Instant startInclusive,
+            @Param("endExclusive") Instant endExclusive
+    );
+
+
     // 2) 일간 상세 표시용 row 목록(여러 개면 summary에서 "외 n건" 처리 가능)
     @Query("""
     SELECT r.ptRoomId AS ptRoomId,
@@ -86,4 +110,30 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
             @Param("startInclusive") Instant startInclusive,
             @Param("endExclusive") Instant endExclusive
     );
+
+    @Query("""
+    SELECT r.ptRoomId AS ptRoomId,
+           r.scheduledStartAt AS scheduledStartAt,
+           r.title AS title
+    FROM PtRoomEntity r
+    LEFT JOIN PtRoomParticipantEntity p
+           ON p.ptRoomId = r.ptRoomId
+          AND p.userId = :userId
+          AND p.status = :participantStatus
+    WHERE r.roomType = :roomType
+      AND r.scheduledStartAt >= :startInclusive
+      AND r.scheduledStartAt < :endExclusive
+      AND r.status IN :statuses
+      AND (r.trainerId = :userId OR p.ptRoomParticipantId IS NOT NULL)
+    ORDER BY r.scheduledStartAt ASC
+""")
+    List<DailyVideoPtRow> findDailyVideoPtRowsForUser(
+            @Param("userId") Long userId,
+            @Param("participantStatus") PtParticipantStatus participantStatus,
+            @Param("roomType") PtRoomType roomType,
+            @Param("statuses") List<PtRoomStatus> statuses,
+            @Param("startInclusive") Instant startInclusive,
+            @Param("endExclusive") Instant endExclusive
+    );
+
 }

@@ -11,6 +11,7 @@ import com.hcproj.healthcareprojectbackend.diet.repository.DietDayRepository;
 import com.hcproj.healthcareprojectbackend.diet.repository.DietMealItemRepository;
 import com.hcproj.healthcareprojectbackend.diet.repository.DietMealRepository;
 import com.hcproj.healthcareprojectbackend.diet.repository.FoodRepository;
+import com.hcproj.healthcareprojectbackend.pt.entity.PtParticipantStatus;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomStatus;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomType;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
@@ -227,8 +228,9 @@ public class CalendarSummaryService {
         Instant endExclusive = endDate.plusDays(1).atStartOfDay(ZONE_ID).toInstant();
 
         // 트레이너 캘린더: 내가 만든 RESERVED + SCHEDULED 세션이 있으면 표시
-        List<Instant> startAts = ptRoomRepository.findReservedStartAtsInRangeForTrainer(
+        List<Instant> startAts = ptRoomRepository.findReservedStartAtsInRangeForUserCalendar(
                 userId,
+                PtParticipantStatus.JOINED, // 너희 enum 실제값에 맞춰
                 PtRoomType.RESERVED,
                 List.of(PtRoomStatus.SCHEDULED),
                 startInclusive,
@@ -314,8 +316,9 @@ public class CalendarSummaryService {
         Instant startInclusive = date.atStartOfDay(ZONE_ID).toInstant();
         Instant endExclusive = date.plusDays(1).atStartOfDay(ZONE_ID).toInstant();
 
-        var rows = ptRoomRepository.findDailyVideoPtRowsForTrainer(
+        var rows = ptRoomRepository.findDailyVideoPtRowsForUser(
                 userId,
+                PtParticipantStatus.JOINED,
                 PtRoomType.RESERVED,
                 List.of(PtRoomStatus.SCHEDULED),
                 startInclusive,
