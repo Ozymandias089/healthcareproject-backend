@@ -11,6 +11,7 @@ import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtJanusRoomKeyRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
+import com.hcproj.healthcareprojectbackend.trainer.repository.TrainerInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class PtRoomQueryService {
     private final PtRoomParticipantRepository ptRoomParticipantRepository;
     private final PtJanusRoomKeyRepository ptJanusRoomKeyRepository;
     private final UserRepository userRepository;
+    private final TrainerInfoRepository trainerInfoRepository;
 
     public PtRoomDetailResponseDTO getPtRoomDetail(Long ptRoomId, Long currentUserId) {
         PtRoomEntity ptRoom = ptRoomRepository.findById(ptRoomId)
@@ -35,6 +37,7 @@ public class PtRoomQueryService {
 
         UserEntity trainer = userRepository.findById(ptRoom.getTrainerId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        String bio = trainerInfoRepository.findBioByTrainerId(trainer.getId()).orElse(null);
 
         // JOINED 참가자만
         List<PtRoomParticipantEntity> activeParticipants = ptRoomParticipantRepository
@@ -62,7 +65,7 @@ public class PtRoomQueryService {
                 .title(ptRoom.getTitle())
                 .description(ptRoom.getDescription())
                 .scheduledAt(ptRoom.getScheduledStartAt())
-                .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), trainer.getProfileImageUrl()))
+                .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), trainer.getProfileImageUrl(), bio))
                 .entryCode(entryCode)
                 .isPrivate(ptRoom.getIsPrivate())
                 .roomType(ptRoom.getRoomType())
