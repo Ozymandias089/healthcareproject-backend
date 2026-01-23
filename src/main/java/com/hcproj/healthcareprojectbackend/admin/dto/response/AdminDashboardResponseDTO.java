@@ -24,6 +24,5 @@ public record AdminDashboardResponseDTO(
 
         // 5. 오늘의 활동
         long todayJoin,       // 신규 가입
-        long todayTrainerApp, // 오늘 들어온 트레이너 신청
         long todayPost        // 오늘 새 게시글
 ) {}
