@@ -4,6 +4,8 @@ import com.hcproj.healthcareprojectbackend.auth.dto.request.*;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.EmailCheckResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.TokenResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.service.AuthService;
+import com.hcproj.healthcareprojectbackend.auth.service.EmailValidationService;
+import com.hcproj.healthcareprojectbackend.auth.service.PasswordResetService;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
+    private final EmailValidationService emailValidationService;
 
     // 회원가입
     @PostMapping("/signup")
@@ -56,8 +60,9 @@ public class AuthController {
 
     // 패스워드 재설정 메일 발송
     @PostMapping("/password/reset/request")
-    public ApiResponse<Void> requestPasswordReset() {
-        throw new UnsupportedOperationException("Not implemented yet");
+    public ApiResponse<Void> requestPasswordReset(@Valid @RequestBody PasswordResetRequestDTO request) {
+        passwordResetService.requestPasswordResetMail(request.email());
+        return ApiResponse.ok();
     }
 
     // 패스워드 재설정

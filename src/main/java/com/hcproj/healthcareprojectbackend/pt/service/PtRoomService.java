@@ -10,6 +10,7 @@ import com.hcproj.healthcareprojectbackend.pt.dto.response.PtRoomDetailResponseD
 import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
+import com.hcproj.healthcareprojectbackend.trainer.repository.TrainerInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,11 +31,13 @@ public class PtRoomService {
     private static final String CHAR_POOL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int CODE_LENGTH = 6;
     private final SecureRandom random = new SecureRandom();
+    private final TrainerInfoRepository trainerInfoRepository;
 
     @Transactional
     public PtRoomDetailResponseDTO createRoom(Long userId, PtRoomCreateRequestDTO request) {
         UserEntity trainer = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        String bio = trainerInfoRepository.findBioByTrainerId(trainer.getId()).orElse(null);
 
         if (request.roomType() == PtRoomType.RESERVED && request.scheduledAt() == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
@@ -70,7 +73,7 @@ public class PtRoomService {
             ensureTrainerJoined(savedRoom.getPtRoomId(), userId);
         }
 
-        return assembleCreateResponse(savedRoom, trainer, entryCode, janusKey);
+        return assembleCreateResponse(savedRoom, trainer, entryCode, janusKey, bio);
     }
 
     @Transactional
@@ -187,9 +190,10 @@ public class PtRoomService {
             PtRoomEntity room,
             UserEntity trainer,
             String entryCode,
-            Integer janusKey
+            Integer janusKey,
+            String bio
     ) {
-        var trainerDTO = new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null);
+        var trainerDTO = new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), trainer.getProfileImageUrl(), bio);
 
         List<PtRoomDetailResponseDTO.UserDTO> participantsList =
                 (room.getStatus() == PtRoomStatus.LIVE)
