@@ -74,4 +74,22 @@ public class UserEntity extends BaseTimeEntity {
         this.status = UserStatus.WITHDRAWN;
         markDeleted();
     }
+
+    public void makeAdmin() {
+        if (this.role == UserRole.ADMIN) return;
+        this.role = UserRole.ADMIN;
+    }
+
+    public void makeTrainer() {
+        if (this.role == UserRole.TRAINER) return;
+        this.role = UserRole.TRAINER;
+    }
+
+    /**
+     * ADMIN, TRAINER인 유저를 일반 사용자로 강등시키는 메서드
+     */
+    public void demote() {
+        if (this.role == UserRole.USER) return;
+        this.role = UserRole.USER;
+    }
 }

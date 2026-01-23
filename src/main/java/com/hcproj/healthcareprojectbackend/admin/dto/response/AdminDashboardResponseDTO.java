@@ -4,8 +4,26 @@ import lombok.Builder;
 
 @Builder
 public record AdminDashboardResponseDTO(
-        long todayJoin,   // 금일 가입자
-        long waitTrainer, // 승인 대기 트레이너 (추후 구현)
-        long newReport,   // 미처리 신고 (추후 구현)
-        long liveRoom     // 현재 진행 중인 방
+        // 1. 회원 현황
+        long totalUser,      // 전체 회원
+        long activeUser,     // 활성
+        long inactiveUser,   // 비활성
+
+        // 2. 게시글 현황
+        long totalPost,      // 전체 게시글
+        long publicPost,     // 공개
+        long hiddenPost,     // 숨김
+
+        // 3. 트레이너 신청 현황
+        long waitTrainer,    // 승인 대기중
+
+        // 4. 화상 PT 현황
+        long totalPt,        // 전체
+        long livePt,         // 진행중
+        long reservedPt,     // 예약
+
+        // 5. 오늘의 활동
+        long todayJoin,       // 신규 가입
+        long todayTrainerApp, // 오늘 들어온 트레이너 신청
+        long todayPost        // 오늘 새 게시글
 ) {}

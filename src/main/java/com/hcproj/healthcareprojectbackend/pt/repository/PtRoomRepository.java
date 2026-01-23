@@ -14,6 +14,9 @@ import java.util.Optional;
 
 public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
 
+    // [추가됨] 상태별 방 개수 카운트 (대시보드용)
+    long countByStatus(PtRoomStatus status);
+
     @Query("SELECT p FROM PtRoomEntity p " +
             "WHERE (:cursorId IS NULL OR p.ptRoomId < :cursorId) " +
             "AND (:statuses IS NULL OR p.status IN :statuses) " +
