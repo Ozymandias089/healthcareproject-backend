@@ -72,7 +72,6 @@ public class AdminDashboardService {
                 .livePt(livePt)
                 .reservedPt(reservedPt)
                 .todayJoin(todayJoin)
-                .todayTrainerApp(todayTrainerApp)
                 .todayPost(todayPost)
                 .build();
     }
