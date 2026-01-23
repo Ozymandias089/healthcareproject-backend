@@ -2,12 +2,12 @@ package com.hcproj.healthcareprojectbackend.admin.service;
 
 import com.hcproj.healthcareprojectbackend.admin.dto.request.AdminNoticeCreateRequestDTO;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminPostListResponseDTO;
-import com.hcproj.healthcareprojectbackend.admin.repository.AdminPostRepository;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostResponseDTO;
 import com.hcproj.healthcareprojectbackend.community.entity.PostEntity;
 import com.hcproj.healthcareprojectbackend.community.entity.PostStatus;
+import com.hcproj.healthcareprojectbackend.community.repository.PostRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminBoardService {
 
-    private final AdminPostRepository adminPostRepository;
+    private final PostRepository postRepository;
     private final UserRepository userRepository;
 
     /**
@@ -70,12 +70,12 @@ public class AdminBoardService {
         Pageable pageable = PageRequest.of(page, size);
 
         // 3) 게시글 조회
-        Page<PostEntity> postPage = adminPostRepository.findAdminPostList(
+        Page<PostEntity> postPage = postRepository.findAdminPostList(
                 categoryParam, statusParam, keywordParam, pageable
         );
 
         // 4) 전체 개수 조회
-        long total = adminPostRepository.countAdminPostList(categoryParam, statusParam, keywordParam);
+        long total = postRepository.countAdminPostList(categoryParam, statusParam, keywordParam);
 
         // 5) 작성자 정보 조회 (N+1 방지를 위해 한 번에 조회)
         List<Long> userIds = postPage.getContent().stream()
@@ -139,7 +139,7 @@ public class AdminBoardService {
                 .build();
 
         // 3) 저장
-        PostEntity savedPost = adminPostRepository.save(post);
+        PostEntity savedPost = postRepository.save(post);
 
         // 4) 응답 DTO 반환
         return PostResponseDTO.builder()
