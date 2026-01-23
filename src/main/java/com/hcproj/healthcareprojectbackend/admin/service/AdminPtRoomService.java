@@ -46,7 +46,8 @@ public class AdminPtRoomService {
             String status,
             String trainerHandle,
             int page,
-            int size
+            int size,
+            String query
     ) {
         // 1) 상태 필터 변환
         List<PtRoomStatus> statusFilter = null;
@@ -83,6 +84,7 @@ public class AdminPtRoomService {
                 statusFilter,   // statuses
                 trainerId,      // trainerId
                 null,           // roomIds
+                query,
                 pageable
         );
 

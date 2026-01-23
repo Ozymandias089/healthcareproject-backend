@@ -20,6 +20,7 @@ public class TrainerInfoEntity extends BaseTimeEntity {
     @Column(name = "user_id")
     private Long userId; // users 1:1, PK=FK
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "application_status", nullable = false, length = 20)
     private TrainerApplicationStatus applicationStatus; // PENDING | APPROVED | REJECTED
 

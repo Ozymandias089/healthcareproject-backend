@@ -19,14 +19,17 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
             "AND (:statuses IS NULL OR p.status IN :statuses) " +
             "AND (:trainerId IS NULL OR p.trainerId = :trainerId) " +
             "AND (:roomIds IS NULL OR p.ptRoomId IN :roomIds) " +
+            "AND (:q IS NULL OR :q = '' OR lower(p.title) LIKE lower(concat('%', :q, '%'))) " +
             "ORDER BY p.ptRoomId DESC")
     List<PtRoomEntity> findPtRoomsByFilters(
             @Param("cursorId") Long cursorId,
             @Param("statuses") List<PtRoomStatus> statuses,
             @Param("trainerId") Long trainerId,
             @Param("roomIds") List<Long> roomIds,
+            @Param("q") String q,
             Pageable pageable
     );
+
 
     List<PtRoomEntity> findAllByTrainerId(Long trainerId);
 
