@@ -11,6 +11,7 @@ import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtJanusRoomKeyRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
+import com.hcproj.healthcareprojectbackend.trainer.repository.TrainerInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class PtRoomQueryService {
     private final PtRoomParticipantRepository ptRoomParticipantRepository;
     private final PtJanusRoomKeyRepository ptJanusRoomKeyRepository;
     private final UserRepository userRepository;
+    private final TrainerInfoRepository trainerInfoRepository;
 
     public PtRoomDetailResponseDTO getPtRoomDetail(Long ptRoomId, Long currentUserId) {
         PtRoomEntity ptRoom = ptRoomRepository.findById(ptRoomId)
@@ -35,6 +37,7 @@ public class PtRoomQueryService {
 
         UserEntity trainer = userRepository.findById(ptRoom.getTrainerId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        String bio = trainerInfoRepository.findBioByTrainerId(trainer.getId()).orElse(null);
 
         // JOINED 참가자만
         List<PtRoomParticipantEntity> activeParticipants = ptRoomParticipantRepository
@@ -62,7 +65,7 @@ public class PtRoomQueryService {
                 .title(ptRoom.getTitle())
                 .description(ptRoom.getDescription())
                 .scheduledAt(ptRoom.getScheduledStartAt())
-                .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null))
+                .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), trainer.getProfileImageUrl(), bio))
                 .entryCode(entryCode)
                 .isPrivate(ptRoom.getIsPrivate())
                 .roomType(ptRoom.getRoomType())
@@ -140,9 +143,9 @@ public class PtRoomQueryService {
             default -> statuses = List.of(PtRoomStatus.LIVE, PtRoomStatus.SCHEDULED);
         }
 
-        // q 검색은 아직 미적용(원하면 title like 조건 추가)
+        // Query 적용
         List<PtRoomEntity> rooms = ptRoomRepository.findPtRoomsByFilters(
-                cursorId, statuses, trainerIdFilter, roomIdFilter, PageRequest.of(0, size + 1)
+                cursorId, statuses, trainerIdFilter, roomIdFilter, q, PageRequest.of(0, size + 1)
         );
 
         boolean hasNext = rooms.size() > size;
@@ -173,7 +176,7 @@ public class PtRoomQueryService {
                     .trainer(new PtRoomListResponseDTO.TrainerDTO(
                             trainer != null ? trainer.getNickname() : "알수없음",
                             trainer != null ? trainer.getHandle() : "unknown",
-                            null
+                            trainer != null ? trainer.getProfileImageUrl() : "null"
                     ))
                     .participants(new PtRoomListResponseDTO.ParticipantsDTO(joinedCount, r.getMaxParticipants()))
                     .build();

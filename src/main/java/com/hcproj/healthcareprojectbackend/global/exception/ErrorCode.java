@@ -57,6 +57,8 @@ public enum ErrorCode {
     /** 로그인 실패(보안상 계정 존재 여부를 숨기기 위해 단일 메시지로 통일) */
     LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "AUTH-005", "이메일 또는 비밀번호가 올바르지 않습니다."),
 
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "AUTH-008", "동일한 요청을 너무 많이 생성했습니다."),
+
     /** 이메일 중복 */
     EMAIL_DUPLICATED(HttpStatus.CONFLICT, "AUTH-006", "이미 사용 중인 이메일입니다."),
 

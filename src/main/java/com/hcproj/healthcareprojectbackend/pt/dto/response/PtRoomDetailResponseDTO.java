@@ -21,7 +21,7 @@ public record PtRoomDetailResponseDTO(
         Integer maxParticipants,
         ParticipantsDTO participants
 ) {
-    public record TrainerDTO(String nickname, String handle, String profileImageUrl) {}
+    public record TrainerDTO(String nickname, String handle, String profileImageUrl, String bio) {}
 
     public record ParticipantsDTO(int count, List<UserDTO> users) {}
 
