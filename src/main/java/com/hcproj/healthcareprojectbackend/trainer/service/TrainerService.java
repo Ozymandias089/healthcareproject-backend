@@ -2,8 +2,6 @@ package com.hcproj.healthcareprojectbackend.trainer.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
-import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
@@ -16,25 +14,24 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class TrainerService {
 
     private final TrainerInfoRepository trainerInfoRepository;
     private final UserRepository userRepository;
-    private final ObjectMapper objectMapper; // Spring Boot 기본 Bean 주입
+    private final ObjectMapper objectMapper;
 
+    // 1. 트레이너 자격증 제출 (신청)
     @Transactional
     public TrainerApplicationResponseDTO submitApplication(Long userId, TrainerApplicationRequestDTO request) {
-        // 1. 유저 권한 검증
-        UserEntity user = userRepository.findById(userId)
+        // 유저 존재 확인
+        userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        if (user.getRole() != UserRole.TRAINER) {
-            throw new BusinessException(ErrorCode.FORBIDDEN); // NOT_TRAINER
-        }
-
-        // 2. JSON 변환 (List<String> -> String)
+        // JSON 변환
         String licenseUrlsJson;
         try {
             licenseUrlsJson = objectMapper.writeValueAsString(request.licenseUrls());
@@ -42,11 +39,13 @@ public class TrainerService {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        // 3. 기존 신청 내역 조회 (userId가 PK)
-        TrainerInfoEntity trainerInfo = trainerInfoRepository.findById(userId).orElse(null);
+        // Optional을 사용하여 재대입 문제 해결
+        Optional<TrainerInfoEntity> optionalTrainerInfo = trainerInfoRepository.findById(userId);
 
-        if (trainerInfo == null) {
-            // [신규 신청]
+        TrainerInfoEntity trainerInfo;
+
+        if (optionalTrainerInfo.isEmpty()) {
+            // [CASE 1] 최초 신청 (새로 생성)
             trainerInfo = TrainerInfoEntity.builder()
                     .userId(userId)
                     .bio(request.bio())
@@ -54,30 +53,27 @@ public class TrainerService {
                     .applicationStatus(TrainerApplicationStatus.PENDING)
                     .build();
             trainerInfoRepository.save(trainerInfo);
-
         } else {
-            // [기존 내역 존재]
-            // 이미 승인되었거나(APPROVED), 심사 중(PENDING)이면 중복 신청 불가
+            // [CASE 2] 재신청 (기존 정보 수정)
+            trainerInfo = optionalTrainerInfo.get();
+
+            // 이미 승인되었거나 대기중이면 중복 신청 불가
             if (trainerInfo.getApplicationStatus() == TrainerApplicationStatus.APPROVED ||
                     trainerInfo.getApplicationStatus() == TrainerApplicationStatus.PENDING) {
-                throw new BusinessException(ErrorCode.ALREADY_EXISTS); // ALREADY_SUBMITTED
+                throw new BusinessException(ErrorCode.ALREADY_EXISTS);
             }
-
-            // 거절됨(REJECTED) 상태라면 덮어쓰기(Overwrite) 허용 -> 재심사 요청
+            // 거절된 상태(REJECTED)라면 다시 PENDING으로 갱신
             trainerInfo.updateApplication(request.bio(), licenseUrlsJson);
         }
 
         return TrainerApplicationResponseDTO.of(trainerInfo.getApplicationStatus());
     }
+
+    // 2. 트레이너 소개문구 수정
     @Transactional
     public void updateBio(Long userId, String bio) {
-        // 1. TrainerInfoEntity 존재 여부 확인
-        // (트레이너 신청을 하지 않은 유저는 수정 불가 -> 에러 발생)
         TrainerInfoEntity trainerInfo = trainerInfoRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        // 또는 ErrorCode.TRAINER_INFO_NOT_FOUND 등 적절한 에러코드 사용
-
-        // 2. 정보 수정 (Entity 메서드 위임)
         trainerInfo.updateBio(bio);
     }
 }
