@@ -22,39 +22,36 @@ public class AdminUserService {
 
     private final AdminUserRepository adminUserRepository;
 
-    // [기존 기능] 관리자 권한 승격
+    // 관리자 권한 승격
     @Transactional
     public void promoteToAdmin(String targetHandle) {
-        // 유저가 존재하는지 확인 (Optional 처리)
         if (!adminUserRepository.existsByHandle(targetHandle)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
-
-        // 별도 Setter 없이 쿼리로 바로 업데이트
         adminUserRepository.updateUserRole(targetHandle, UserRole.ADMIN);
     }
 
-    // [신규 기능] 전체 회원 목록 조회
+    // 전체 회원 목록 조회
     @Transactional(readOnly = true)
     public AdminUserListResponseDTO getUserList(int page, int size, String roleStr, String keyword) {
 
-        // 1. Role 파라미터 변환 (String -> Enum)
+        // 1. Role 파라미터 변환
         UserRole role = null;
         if (roleStr != null && !roleStr.isBlank()) {
             try {
                 role = UserRole.valueOf(roleStr.toUpperCase());
             } catch (IllegalArgumentException e) {
-                // 잘못된 Role 값이 오면 필터링을 하지 않음
+                // 잘못된 Role 값 무시
             }
         }
 
-        // 2. 페이징 설정 (가입일 최신순 정렬)
+        // 2. 페이징 설정 (가입일 최신순)
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        // 3. DB 조회 (동적 쿼리 실행)
+        // 3. DB 조회
         Page<UserEntity> userPage = adminUserRepository.findAllWithFilters(role, keyword, pageable);
 
-        // 4. 결과 매핑 (Entity -> DTO)
+        // 4. 결과 매핑
         List<AdminUserListResponseDTO.AdminUserDetailDTO> dtoList = userPage.stream()
                 .map(this::convertToDetailDTO)
                 .toList();
@@ -73,8 +70,7 @@ public class AdminUserService {
                 .handle(user.getHandle())
                 .nickname(user.getNickname())
                 .role(user.getRole().name())
-                // UserEntity에 status 필드가 있다면 user.getStatus().name() 등으로 변경
-                .status("ACTIVE")
+                .status(user.getStatus().name())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

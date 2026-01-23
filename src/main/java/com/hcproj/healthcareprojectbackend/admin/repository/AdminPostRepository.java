@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+
 /**
  * 관리자 게시판 리포지토리
  */
@@ -19,6 +21,13 @@ public interface AdminPostRepository extends JpaRepository<PostEntity, Long> {
      * - status: 게시글 상태 필터 (null이면 전체)
      * - keyword: 제목 또는 작성자 닉네임 검색 (null이면 전체)
      */
+
+    // 상태별 게시글 수 (POSTED, DELETED)
+    long countByStatus(PostStatus status);
+
+    // 오늘 작성된 게시글 수
+    long countByCreatedAtAfter(Instant startOfDay);
+
     @Query("SELECT p FROM PostEntity p " +
             "LEFT JOIN UserEntity u ON p.userId = u.id " +
             "WHERE (:category IS NULL OR p.category = :category) " +

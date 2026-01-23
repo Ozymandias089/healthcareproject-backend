@@ -1,8 +1,10 @@
 package com.hcproj.healthcareprojectbackend.admin.service;
 
 import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminDashboardResponseDTO;
-import com.hcproj.healthcareprojectbackend.admin.repository.AdminPtRoomRepository;
+import com.hcproj.healthcareprojectbackend.admin.repository.AdminPostRepository;
 import com.hcproj.healthcareprojectbackend.admin.repository.AdminUserRepository;
+import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
+import com.hcproj.healthcareprojectbackend.community.entity.PostStatus;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomStatus;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
 import com.hcproj.healthcareprojectbackend.trainer.entity.TrainerApplicationStatus;
@@ -11,8 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
+import java.time.Instant;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -20,31 +23,57 @@ import java.time.ZoneId;
 public class AdminDashboardService {
 
     private final AdminUserRepository adminUserRepository;
-    private final AdminPtRoomRepository adminPtRoomRepository;
     private final TrainerInfoRepository trainerInfoRepository;
     private final PtRoomRepository ptRoomRepository;
+    private final AdminPostRepository adminPostRepository;
 
     public AdminDashboardResponseDTO getDashboardData() {
-        // 1. 금일 가입자 수
-        var startOfToday = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant();
-        long todayJoin = adminUserRepository.countByCreatedAtAfter(startOfToday);
+        // [날짜 계산] 오늘 00:00:00 (시스템 타임존 기준)
+        Instant startOfToday = Instant.now()
+                .atZone(ZoneId.systemDefault())
+                .truncatedTo(ChronoUnit.DAYS)
+                .toInstant();
 
-        // 2. 승인 대기 트레이너 수 (실제 DB 조회 연동 완료)
+        // 1. 회원 현황
+        // 전체 회원 수 (DB 전체 카운트)
+        long totalUser = adminUserRepository.count();
+        // 활성 회원 수
+        long activeUser = adminUserRepository.countByStatus(UserStatus.ACTIVE);
+        // [수정됨] 비활성 회원 = 전체 - 활성 (정지, 탈퇴 등 포함)
+        long inactiveUser = totalUser - activeUser;
+
+        // 2. 게시글 현황
+        long publicPost = adminPostRepository.countByStatus(PostStatus.POSTED);
+        long hiddenPost = adminPostRepository.countByStatus(PostStatus.DELETED);
+        long totalPost = publicPost + hiddenPost;
+
+        // 3. 트레이너 신청 현황 (대기중)
         long waitTrainer = trainerInfoRepository.countByApplicationStatus(TrainerApplicationStatus.PENDING);
-        long newReport = 0;
 
-        // 2. 현재 라이브 방
-        long livePt = ptRoomRepository.countByStatus(PtRoomStatus.LIVE);           // 진행중
-        long reservedPt = ptRoomRepository.countByStatus(PtRoomStatus.SCHEDULED);  // 예약
-        long totalPt = livePt + reservedPt; // 전체 = 진행중 + 예약
+        // 4. 화상 PT 현황
+        long livePt = ptRoomRepository.countByStatus(PtRoomStatus.LIVE);
+        long reservedPt = ptRoomRepository.countByStatus(PtRoomStatus.SCHEDULED);
+        long totalPt = livePt + reservedPt;
+
+        // 5. 오늘의 활동
+        long todayJoin = adminUserRepository.countByCreatedAtAfter(startOfToday);
+        long todayTrainerApp = trainerInfoRepository.countByCreatedAtAfter(startOfToday);
+        long todayPost = adminPostRepository.countByCreatedAtAfter(startOfToday);
 
         return AdminDashboardResponseDTO.builder()
-                .todayJoin(todayJoin)
+                .totalUser(totalUser)
+                .activeUser(activeUser)
+                .inactiveUser(inactiveUser)
+                .totalPost(totalPost)
+                .publicPost(publicPost)
+                .hiddenPost(hiddenPost)
                 .waitTrainer(waitTrainer)
-                .newReport(newReport)
                 .totalPt(totalPt)
-                .livePt(livePt)         // [변경] liveRoom -> livePt
+                .livePt(livePt)
                 .reservedPt(reservedPt)
+                .todayJoin(todayJoin)
+                .todayTrainerApp(todayTrainerApp)
+                .todayPost(todayPost)
                 .build();
     }
 }

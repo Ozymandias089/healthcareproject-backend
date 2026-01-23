@@ -2,6 +2,7 @@ package com.hcproj.healthcareprojectbackend.admin.repository;
 
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
+import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,13 +18,16 @@ public interface AdminUserRepository extends JpaRepository<UserEntity, Long> {
 
     boolean existsByHandle(String handle);
 
-    // 권한 강제 변경 (Entity 수정 없이 DB 직접 업데이트)
+    // 권한 강제 변경
     @Modifying
     @Query("UPDATE UserEntity u SET u.role = :role WHERE u.handle = :handle")
     void updateUserRole(@Param("handle") String handle, @Param("role") UserRole role);
 
-    // 대시보드용 가입자 수 집계
+    // 오늘 가입한 회원 수 (BaseTimeEntity 활용)
     long countByCreatedAtAfter(Instant startOfDay);
+
+    // 상태별 회원 수 (ACTIVE, INACTIVE 등)
+    long countByStatus(UserStatus status);
 
     @Query("SELECT u FROM UserEntity u " +
             "WHERE (:role IS NULL OR u.role = :role) " +
