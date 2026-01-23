@@ -62,7 +62,7 @@ public class PtRoomQueryService {
                 .title(ptRoom.getTitle())
                 .description(ptRoom.getDescription())
                 .scheduledAt(ptRoom.getScheduledStartAt())
-                .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), null))
+                .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), trainer.getProfileImageUrl()))
                 .entryCode(entryCode)
                 .isPrivate(ptRoom.getIsPrivate())
                 .roomType(ptRoom.getRoomType())
@@ -173,7 +173,7 @@ public class PtRoomQueryService {
                     .trainer(new PtRoomListResponseDTO.TrainerDTO(
                             trainer != null ? trainer.getNickname() : "알수없음",
                             trainer != null ? trainer.getHandle() : "unknown",
-                            null
+                            trainer != null ? trainer.getProfileImageUrl() : "null"
                     ))
                     .participants(new PtRoomListResponseDTO.ParticipantsDTO(joinedCount, r.getMaxParticipants()))
                     .build();
