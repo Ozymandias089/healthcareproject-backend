@@ -1,7 +1,8 @@
 package com.hcproj.healthcareprojectbackend.admin.service;
 
 import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminUserListResponseDTO;
-import com.hcproj.healthcareprojectbackend.admin.repository.AdminUserRepository;
+import com.hcproj.healthcareprojectbackend.admin.repository.AdminUserRepository; // 제거대상
+import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
@@ -21,14 +22,19 @@ import java.util.List;
 public class AdminUserService {
 
     private final AdminUserRepository adminUserRepository;
+    private final UserRepository userRepository;
 
     // 관리자 권한 승격
     @Transactional
     public void promoteToAdmin(String targetHandle) {
-        if (!adminUserRepository.existsByHandle(targetHandle)) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
-        adminUserRepository.updateUserRole(targetHandle, UserRole.ADMIN);
+        //if (!adminUserRepository.existsByHandle(targetHandle)) {
+            //throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        //}
+        //adminUserRepository.updateUserRole(targetHandle, UserRole.ADMIN);
+        UserEntity target = userRepository.findByHandle(targetHandle)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        target.updateRole(UserRole.ADMIN);
+        
     }
 
     // 전체 회원 목록 조회
