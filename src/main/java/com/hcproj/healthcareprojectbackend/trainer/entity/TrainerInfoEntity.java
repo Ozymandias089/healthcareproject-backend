@@ -41,7 +41,7 @@ public class TrainerInfoEntity extends BaseTimeEntity {
 
     // 트레이너 재신청 시 정보를 갱신하는 메서드
     public void updateApplication(String bio, String licenseUrlsJson) {
-        this.bio = bio;
+        updateBio(bio);
         this.licenseUrlsJson = licenseUrlsJson;
         this.applicationStatus = TrainerApplicationStatus.PENDING; // 다시 대기 상태로 변경
         this.rejectReason = null; // 기존 거절 사유 초기화
@@ -57,4 +57,18 @@ public class TrainerInfoEntity extends BaseTimeEntity {
             this.bio = bio;
         }
     }
+        // [추가됨] 관리자 승인 처리 (상태 변경 + 승인일시 기록)
+        public void approve() {
+            this.applicationStatus = TrainerApplicationStatus.APPROVED;
+            this.approvedAt = Instant.now();
+            this.rejectReason = null; // 혹시 거절된 적이 있다면 사유 초기화
+        }
+
+        // [추가됨] 관리자 거절 처리
+        public void reject(String reason) {
+            this.applicationStatus = TrainerApplicationStatus.REJECTED;
+            this.rejectReason = reason;
+            this.approvedAt = null; // 승인된 적이 있다면 취소됨
+    }
 }
+
