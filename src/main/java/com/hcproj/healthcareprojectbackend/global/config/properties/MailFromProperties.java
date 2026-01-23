@@ -1,4 +1,4 @@
-package com.hcproj.healthcareprojectbackend.global.config;
+package com.hcproj.healthcareprojectbackend.global.config.properties;
 
 import lombok.Getter;
 import lombok.Setter;
