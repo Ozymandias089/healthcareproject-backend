@@ -57,7 +57,6 @@ public class AdminDashboardService {
 
         // 5. 오늘의 활동
         long todayJoin = userRepository.countByCreatedAtAfter(startOfToday);
-        long todayTrainerApp = trainerInfoRepository.countByCreatedAtAfter(startOfToday);
         long todayPost = postRepository.countByCreatedAtAfter(startOfToday);
 
         return AdminDashboardResponseDTO.builder()
