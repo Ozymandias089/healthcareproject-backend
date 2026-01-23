@@ -36,9 +36,10 @@ public class AdminPtRoomController {
             @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "trainerHandle", required = false) String trainerHandle,
             @RequestParam(name = "page", required = false, defaultValue = "0") int page,
-            @RequestParam(name = "size", required = false, defaultValue = "10") int size
+            @RequestParam(name = "size", required = false, defaultValue = "10") int size,
+            @RequestParam(name = "q", required = false) String q
     ) {
-        return ApiResponse.ok(adminPtRoomService.getAdminPtRoomList(status, trainerHandle, page, size));
+        return ApiResponse.ok(adminPtRoomService.getAdminPtRoomList(status, trainerHandle, page, size, q));
     }
 
     /**

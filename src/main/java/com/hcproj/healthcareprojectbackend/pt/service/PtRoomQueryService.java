@@ -143,9 +143,9 @@ public class PtRoomQueryService {
             default -> statuses = List.of(PtRoomStatus.LIVE, PtRoomStatus.SCHEDULED);
         }
 
-        // q 검색은 아직 미적용(원하면 title like 조건 추가)
+        // Query 적용
         List<PtRoomEntity> rooms = ptRoomRepository.findPtRoomsByFilters(
-                cursorId, statuses, trainerIdFilter, roomIdFilter, PageRequest.of(0, size + 1)
+                cursorId, statuses, trainerIdFilter, roomIdFilter, q, PageRequest.of(0, size + 1)
         );
 
         boolean hasNext = rooms.size() > size;
