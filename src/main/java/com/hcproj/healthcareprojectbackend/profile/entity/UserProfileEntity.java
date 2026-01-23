@@ -42,6 +42,7 @@ public class UserProfileEntity extends BaseTimeEntity {
     @Column(name = "session_minutes")
     private Integer sessionMinutes;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "profile_allergies")
     private List<AllergyType> allergies;
 }

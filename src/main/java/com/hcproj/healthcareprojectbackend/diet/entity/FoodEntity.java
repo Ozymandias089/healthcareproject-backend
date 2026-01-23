@@ -25,6 +25,7 @@ public class FoodEntity extends BaseTimeEntity {
     @Column(name = "image_url", length = 2048)
     private String imageUrl;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "nutrition_unit", nullable = false, length = 20)
     private String nutritionUnit; // G | ML | UNIT | CUP | L
 
