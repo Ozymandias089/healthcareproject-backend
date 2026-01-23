@@ -77,4 +77,10 @@ public class PtRoomEntity extends BaseTimeEntity {
         this.status = PtRoomStatus.CANCELLED;
         markDeleted();
     }
+    // 관리자 화상 PT 강제 종료 처리
+    public void forceClose() {
+        if (this.status == PtRoomStatus.FORCE_CLOSED) return;
+        this.status = PtRoomStatus.FORCE_CLOSED;
+        markDeleted();
+    }
 }

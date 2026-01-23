@@ -1,5 +1,5 @@
 package com.hcproj.healthcareprojectbackend.pt.entity;
 
 public enum PtRoomStatus {
-    SCHEDULED, LIVE, ENDED, CANCELLED
+    SCHEDULED, LIVE, ENDED, CANCELLED, FORCE_CLOSED
 }
