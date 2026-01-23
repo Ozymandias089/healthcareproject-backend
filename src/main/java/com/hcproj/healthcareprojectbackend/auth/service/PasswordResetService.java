@@ -21,6 +21,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
 
+import static com.hcproj.healthcareprojectbackend.global.util.UtilityProvider.normalizeEmail;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -90,10 +92,6 @@ public class PasswordResetService {
         });
 
         // 3) 항상 성공 응답(컨트롤러에서 ok 반환)
-    }
-    private String normalizeEmail(String email) {
-        if (email == null) return null;
-        return email.trim().toLowerCase();
     }
 
     private String buildResetLink(String tokenId, String email) {

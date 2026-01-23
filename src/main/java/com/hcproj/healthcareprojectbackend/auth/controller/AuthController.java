@@ -4,7 +4,7 @@ import com.hcproj.healthcareprojectbackend.auth.dto.request.*;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.EmailCheckResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.TokenResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.service.AuthService;
-import com.hcproj.healthcareprojectbackend.auth.service.EmailValidationService;
+import com.hcproj.healthcareprojectbackend.auth.service.EmailVerificationService;
 import com.hcproj.healthcareprojectbackend.auth.service.PasswordResetService;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
-    private final EmailValidationService emailValidationService;
+    private final EmailVerificationService emailVerificationService;
 
     // 회원가입
     @PostMapping("/signup")
@@ -69,6 +69,20 @@ public class AuthController {
     @PostMapping("/password/reset")
     public ApiResponse<Void> resetPassword(@Valid @RequestBody PasswordResetConfirmRequestDTO request) {
         passwordResetService.resetPassword(request.token(),request.email(), request.password());
+        return ApiResponse.ok();
+    }
+
+    // 이메일 인증 코드 발송
+    @PostMapping("/email/verify/request")
+    public ApiResponse<Void> requestEmailVerification(@Valid @RequestBody EmailVerificationRequestDTO request) {
+        emailVerificationService.sendVerificationCode(request.email());
+        return ApiResponse.ok();
+    }
+
+    // 이메일 인증 코드 확인
+    @PostMapping("/email/verify/confirm")
+    public ApiResponse<Void> confirmEmailVerification(@Valid @RequestBody EmailVerificationConfirmRequestDTO request) {
+        emailVerificationService.confirmVerificationCode(request.email(), request.code());
         return ApiResponse.ok();
     }
 }
