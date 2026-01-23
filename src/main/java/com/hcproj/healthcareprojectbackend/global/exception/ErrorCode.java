@@ -65,6 +65,8 @@ public enum ErrorCode {
     /** 핸들 중복(현재는 handle이 임시 생성이라 실제로는 거의 발생하지 않음) */
     HANDLE_DUPLICATED(HttpStatus.CONFLICT, "AUTH-007", "이미 사용 중인 핸들입니다."),
 
+    INVALID_INPUT(HttpStatus.BAD_REQUEST, "AUTH-009", "입력값이 올바르지 않습니다."),
+
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-001", "사용자를 찾을 수 없습니다."),
     // Community (Post/Comment) [추가]
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMUNITY-001", "게시글을 찾을 수 없습니다."),

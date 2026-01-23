@@ -67,7 +67,8 @@ public class AuthController {
 
     // 패스워드 재설정
     @PostMapping("/password/reset")
-    public ApiResponse<Void> resetPassword() {
-        throw new UnsupportedOperationException("Not implemented yet");
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody PasswordResetConfirmRequestDTO request) {
+        passwordResetService.resetPassword(request.token(),request.email(), request.password());
+        return ApiResponse.ok();
     }
 }
