@@ -164,8 +164,7 @@ public enum ErrorCode {
     CANNOT_BAN_ADMIN(HttpStatus.FORBIDDEN, "ADMIN-004", "관리자는 차단할 수 없습니다."),
     TRAINER_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-005", "트레이너 신청 내역이 없습니다."),
     TRAINER_REJECT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "ADMIN-006", "거절 사유를 입력해주세요."),
-    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-007", "신고 내역을 찾을 수 없습니다.");
-  
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-007", "신고 내역을 찾을 수 없습니다."),
     /* ===========================================
      * Upload (UPLOAD-xxx)
      * =========================================== */
