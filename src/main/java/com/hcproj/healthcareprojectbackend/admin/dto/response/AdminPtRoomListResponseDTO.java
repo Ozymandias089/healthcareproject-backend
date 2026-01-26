@@ -21,6 +21,8 @@ public record AdminPtRoomListResponseDTO(
             PtRoomType roomType,
             Instant scheduledStartAt,
             Integer maxParticipants,
+            Boolean isPrivate,
+            String entryCode,
             PtRoomStatus status,
             Instant createdAt
     ) {}
