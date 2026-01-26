@@ -104,8 +104,6 @@ public class SecurityConfig {
 
                         // 인증/회원 관련 API는 인증 없이 접근 가능
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/social/connect").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/social/disconnect").authenticated()
 
                         // 관리자 전용 API 잠금
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

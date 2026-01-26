@@ -190,51 +190,6 @@ public class AuthService {
         return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
     }
 
-    @Transactional
-    public void connectSocial(Long userId, SocialConnectRequestDTO request) {
-        SocialProfile profile = socialOAuthClient.fetchProfile(request.provider(), request.accessToken());
-
-        // 1) 이 provider 계정이 이미 누군가에 연결되어 있나?
-        var byProviderUser = socialAccountRepository.findByProviderAndProviderUserId(
-                request.provider(), profile.providerUserId()
-        );
-        if (byProviderUser.isPresent()) {
-            if (!byProviderUser.get().getUserId().equals(userId)) {
-                throw new BusinessException(ErrorCode.SOCIAL_ACCOUNT_TAKEN);
-            }
-            // 이미 본인에게 연결된 케이스
-            return;
-        }
-
-        // 2) 이 유저가 이미 같은 provider를 연결했나? (구글 2개 비허용)
-        if (socialAccountRepository.existsByUserIdAndProvider(userId, request.provider())) {
-            throw new BusinessException(ErrorCode.SOCIAL_ALREADY_CONNECTED);
-        }
-
-        SocialAccountEntity link = SocialAccountEntity.connect(userId, request.provider(), profile.providerUserId());
-        socialAccountRepository.save(link);
-    }
-
-    @Transactional
-    public void disconnectSocial(Long userId, SocialDisconnectRequestDTO request) {
-        SocialAccountEntity link = socialAccountRepository.findByUserIdAndProvider(userId, request.provider())
-                .orElseThrow(() -> new BusinessException(ErrorCode.SOCIAL_ACCOUNT_NOT_CONNECTED));
-
-        UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        long connectedCount = socialAccountRepository.countByUserId(userId);
-
-        boolean hasNoPassword = (user.getPasswordHash() == null || user.getPasswordHash().isBlank());
-
-        // 비밀번호 없으면 최소 1개는 연결 유지
-        if (hasNoPassword && connectedCount <= 1) {
-            throw new BusinessException(ErrorCode.CANNOT_DISCONNECT_LAST_LOGIN_METHOD);
-        }
-
-        socialAccountRepository.delete(link);
-    }
-
     /**
      * 토큰 재발급.
      *
