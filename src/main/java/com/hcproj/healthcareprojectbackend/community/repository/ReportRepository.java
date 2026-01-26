@@ -12,4 +12,7 @@ public interface ReportRepository extends JpaRepository<ReportEntity, Long> {
 
     // [추가] 특정 대상(게시글/댓글)에 대한 신고 목록 조회 (삭제 시 일괄 처리를 위해 필요)
     List<ReportEntity> findByTargetIdAndType(Long targetId, ReportType type);
+
+    // [추가] 중복 신고 체크용
+    boolean existsByReporterIdAndTargetIdAndType(Long reporterId, Long targetId, ReportType type);
 }
