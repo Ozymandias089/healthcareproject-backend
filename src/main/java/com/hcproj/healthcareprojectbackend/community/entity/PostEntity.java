@@ -64,8 +64,13 @@ public class PostEntity extends BaseTimeEntity {
     }
 
     public void delete() {
-        if (this.isDeleted()) return;
+        // 1. 멱등성 체크
+        if (this.status == PostStatus.DELETED || this.isDeleted()) {
+            return;
+        }
+
+        // 2. 상태 변경 및 삭제 시간 기록
         this.status = PostStatus.DELETED;
-        this.markDeleted();
+        this.markDeleted(); // BaseTimeEntity의 deletedAt에 현재 시간 기록
     }
 }
