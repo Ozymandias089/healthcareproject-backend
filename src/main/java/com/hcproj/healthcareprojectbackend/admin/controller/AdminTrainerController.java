@@ -1,12 +1,12 @@
 package com.hcproj.healthcareprojectbackend.admin.controller;
 
 import com.hcproj.healthcareprojectbackend.admin.dto.request.TrainerRejectRequestDTO;
-import com.hcproj.healthcareprojectbackend.admin.dto.response.TrainerPendingListResponseDTO;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.TrainerRejectResponseDTO;
 import com.hcproj.healthcareprojectbackend.admin.service.AdminTrainerService;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.AdminOnly;
 import com.hcproj.healthcareprojectbackend.trainer.dto.response.TrainerApproveResponseDTO;
+import com.hcproj.healthcareprojectbackend.trainer.dto.response.TrainerPendingListResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;

@@ -38,6 +38,8 @@ public enum ErrorCode {
     /** 처리되지 않은 예외 등 서버 내부 오류 */
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-500", "서버 오류가 발생했습니다."),
 
+    INVALID_DATA(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-002", "데이터가 유효하지 않습니다."),
+
     // -------------------------
     // Auth/Security
     // -------------------------
