@@ -138,8 +138,9 @@ public class AuthService {
 
     @Transactional
     public TokenResponseDTO socialLoginOrSignup(SocialLoginRequestDTO request) {
-        SocialProfile profile = socialOAuthClient.fetchProfile(request.provider(), request.accessToken());
-
+        SocialProfile profile = socialOAuthClient.fetchProfileByCode(
+                request.provider(), request.code(), request.redirectUri(), request.state()
+        );
         // 1) provider_user_id로 기존 연동 존재하면 -> 해당 user 로그인
         var existingLink = socialAccountRepository.findByProviderAndProviderUserId(
                 request.provider(), profile.providerUserId()

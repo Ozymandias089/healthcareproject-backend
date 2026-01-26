@@ -41,6 +41,16 @@ public class RestTemplateSocialOAuthClient implements SocialOAuthClient {
         }
     }
 
+    @Override
+    public SocialProfile fetchProfileByCode(SocialProvider provider, String code, String redirectUri, String state) {
+        if (provider == null || code == null || code.isBlank() || redirectUri == null || redirectUri.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        String accessToken = exchangeAccessToken(provider, code, redirectUri, state);
+        return fetchProfile(provider, accessToken); // 기존 로직 재사용
+    }
+
     private SocialProfile fetchGoogle(String accessToken) throws Exception {
         String url = props.getGoogle().getUserinfoUrl();
 
@@ -117,5 +127,93 @@ public class RestTemplateSocialOAuthClient implements SocialOAuthClient {
     private String textOrNull(JsonNode node, String field) {
         if (node == null || node.isMissingNode()) return null;
         return node.hasNonNull(field) ? node.get(field).asText() : null;
+    }
+
+    private String exchangeAccessToken(SocialProvider provider, String code, String redirectUri, String state) {
+        return switch (provider) {
+            case GOOGLE -> exchangeGoogle(code, redirectUri);
+            case KAKAO -> exchangeKakao(code, redirectUri);
+            case NAVER -> exchangeNaver(code, state);
+        };
+    }
+
+    private String exchangeGoogle(String code, String redirectUri) {
+        // Google: https://oauth2.googleapis.com/token, grant_type=authorization_code :contentReference[oaicite:3]{index=3}
+        String tokenUrl = props.getGoogle().getTokenUrl();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        var form = new org.springframework.util.LinkedMultiValueMap<String, String>();
+        form.add("grant_type", "authorization_code");
+        form.add("code", code);
+        form.add("client_id", props.getGoogle().getClientId());
+        form.add("client_secret", props.getGoogle().getClientSecret());
+        form.add("redirect_uri", redirectUri);
+
+        ResponseEntity<String> resp = restTemplate.postForEntity(tokenUrl, new HttpEntity<>(form, headers), String.class);
+        return extractAccessTokenOrThrow(resp);
+    }
+
+    private String exchangeKakao(String code, String redirectUri) {
+        // Kakao: https://kauth.kakao.com/oauth/token, form-urlencoded :contentReference[oaicite:4]{index=4}
+        String tokenUrl = props.getKakao().getTokenUrl();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        var form = new org.springframework.util.LinkedMultiValueMap<String, String>();
+        form.add("grant_type", "authorization_code");
+        form.add("client_id", props.getKakao().getClientId());      // REST API key
+        form.add("redirect_uri", redirectUri);
+        form.add("code", code);
+
+        // client_secret 기능 ON이면 반드시 포함 필요(카카오 문서 주의사항) :contentReference[oaicite:5]{index=5}
+        String clientSecret = props.getKakao().getClientSecret();
+        if (clientSecret != null && !clientSecret.isBlank()) {
+            form.add("client_secret", clientSecret);
+        }
+
+        ResponseEntity<String> resp = restTemplate.postForEntity(tokenUrl, new HttpEntity<>(form, headers), String.class);
+        return extractAccessTokenOrThrow(resp);
+    }
+
+    private String exchangeNaver(String code, String state) {
+        // Naver 예시: https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id=...&client_secret=...&code=...&state=...
+        // :contentReference[oaicite:6]{index=6}
+        if (state == null || state.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE); // NAVER는 state 권장(검증까지 하면 더 좋음)
+        }
+
+        String tokenUrl = props.getNaver().getTokenUrl(); // ex) https://nid.naver.com/oauth2.0/token
+
+        String url = org.springframework.web.util.UriComponentsBuilder
+                .fromHttpUrl(tokenUrl)
+                .queryParam("grant_type", "authorization_code")
+                .queryParam("client_id", props.getNaver().getClientId())
+                .queryParam("client_secret", props.getNaver().getClientSecret())
+                .queryParam("code", code)
+                .queryParam("state", state)
+                .build(true)
+                .toUriString();
+
+        ResponseEntity<String> resp = restTemplate.getForEntity(url, String.class);
+        return extractAccessTokenOrThrow(resp);
+    }
+
+    private String extractAccessTokenOrThrow(ResponseEntity<String> resp) {
+        if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+        try {
+            JsonNode root = objectMapper.readTree(resp.getBody());
+            String accessToken = root.path("access_token").asText(null);
+            if (accessToken == null || accessToken.isBlank()) {
+                throw new BusinessException(ErrorCode.INVALID_TOKEN);
+            }
+            return accessToken;
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
     }
 }

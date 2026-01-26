@@ -28,7 +28,12 @@ public class MeSocialService {
 
     @Transactional
     public void connectSocial(Long userId, SocialConnectRequestDTO request) {
-        SocialProfile profile = socialOAuthClient.fetchProfile(request.provider(), request.accessToken());
+        SocialProfile profile = socialOAuthClient.fetchProfileByCode(
+                request.provider(),
+                request.code(),
+                request.redirectUri(),
+                request.state()
+        );
 
         // 1) 이 provider 계정이 이미 누군가에 연결되어 있나?
         var byProviderUser = socialAccountRepository.findByProviderAndProviderUserId(
@@ -50,6 +55,7 @@ public class MeSocialService {
         SocialAccountEntity link = SocialAccountEntity.connect(userId, request.provider(), profile.providerUserId());
         socialAccountRepository.save(link);
     }
+
 
     @Transactional
     public void disconnectSocial(Long userId, SocialDisconnectRequestDTO request) {
