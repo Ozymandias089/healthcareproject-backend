@@ -28,11 +28,12 @@ public class AdminReportService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
 
-    // 1. 신고 목록 조회 (기존 로직 유지)
+    // 1. 신고 목록 조회 (status, type 필터 적용)
     @Transactional(readOnly = true)
-    public AdminReportListResponseDTO getReportList(String statusStr) {
+    public AdminReportListResponseDTO getReportList(String statusStr, String typeStr) {
         List<ReportEntity> reports;
 
+        // (1) Status 필터링
         if (statusStr != null && !statusStr.isBlank()) {
             try {
                 ReportStatus status = ReportStatus.valueOf(statusStr.toUpperCase());
@@ -44,10 +45,24 @@ public class AdminReportService {
             reports = reportRepository.findAll();
         }
 
+        // (2) Type(POST/COMMENT) 필터링
+        if (typeStr != null && !typeStr.isBlank()) {
+            try {
+                ReportType typeFilter = ReportType.valueOf(typeStr.toUpperCase());
+                reports = reports.stream()
+                        .filter(r -> r.getType() == typeFilter)
+                        .toList();
+            } catch (IllegalArgumentException e) {
+                // 타입 값이 이상하면 무시하고 진행
+            }
+        }
+
+        // (3) 사용자 정보 조회 (N+1 방지)
         List<Long> reporterIds = reports.stream().map(ReportEntity::getReporterId).distinct().toList();
         Map<Long, UserEntity> userMap = reporterIds.isEmpty() ? Collections.emptyMap() :
                 userRepository.findAllById(reporterIds).stream().collect(Collectors.toMap(UserEntity::getId, u -> u));
 
+        // (4) DTO 변환
         List<AdminReportListResponseDTO.AdminReportItemDTO> list = reports.stream()
                 .map(report -> {
                     UserEntity reporter = userMap.get(report.getReporterId());
@@ -66,11 +81,11 @@ public class AdminReportService {
         return AdminReportListResponseDTO.builder().total(list.size()).list(list).build();
     }
 
-    // 2. 신고 상태 변경 및 후속 처리 (통합 로직)
+    // 2. 신고 상태 변경 및 후속 처리
     @Transactional
     public void updateReportStatus(Long reportId, ReportStatusUpdateRequestDTO request) {
         ReportEntity report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)); // 필요시 에러코드 추가
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         ReportStatus newStatus;
         try {
@@ -79,47 +94,33 @@ public class AdminReportService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // 상태별 로직 분기
         if (newStatus == ReportStatus.REJECTED) {
-            // [반려] -> 해당 신고만 'REJECTED'로 변경하고 끝 (글 삭제 X)
             report.reject();
         }
         else if (newStatus == ReportStatus.PROCESSED) {
-            // [처리 승인] -> 글 삭제 + 관련 신고 일괄 처리
             processReportAndContent(report);
         }
     }
 
-    // [내부 메서드] 신고 처리 승인 시 -> 콘텐츠 강제 삭제 및 연관 신고 정리
+    // 신고 처리 승인 시 로직
     private void processReportAndContent(ReportEntity currentReport) {
-        // 1. 현재 신고 처리됨 변경
         currentReport.process();
 
-        // 2. 콘텐츠 타입에 따른 강제 삭제
         if (currentReport.getType() == ReportType.POST) {
-            PostEntity post = postRepository.findById(currentReport.getTargetId())
-                    .orElse(null); // 이미 삭제되었을 수도 있으므로 null 체크
-
-            if (post != null) {
-                post.delete(); // 게시글 삭제 (멱등성 보장)
-            }
+            PostEntity post = postRepository.findById(currentReport.getTargetId()).orElse(null);
+            if (post != null) post.delete();
         }
         else if (currentReport.getType() == ReportType.COMMENT) {
-            CommentEntity comment = commentRepository.findById(currentReport.getTargetId())
-                    .orElse(null);
-
-            if (comment != null) {
-                comment.delete(); // 댓글 삭제 (Entity에 delete 메서드 필요)
-            }
+            CommentEntity comment = commentRepository.findById(currentReport.getTargetId()).orElse(null);
+            if (comment != null) comment.delete();
         }
 
-        // 3. 해당 콘텐츠(TargetId)에 걸려있는 "다른 신고들"도 모두 'PROCESSED'로 일괄 변경
         List<ReportEntity> relatedReports = reportRepository.findByTargetIdAndType(
                 currentReport.getTargetId(), currentReport.getType()
         );
 
         for (ReportEntity related : relatedReports) {
-            related.process(); // 이미 처리된 건 멱등성 로직에 의해 무시됨
+            related.process();
         }
     }
 }

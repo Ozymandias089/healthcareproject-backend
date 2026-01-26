@@ -51,11 +51,10 @@ public class AuthController {
         return ApiResponse.ok();
     }
 
-    // 소셜 로그인 (스펙 확정 전이라 껍데기만)
+    // 소셜 로그인
     @PostMapping("/social/login")
-    public ApiResponse<TokenResponseDTO> socialLogin() {
-        // TODO: provider, code/token payload 확정되면 구현
-        throw new UnsupportedOperationException("Not implemented yet");
+    public ApiResponse<TokenResponseDTO> socialLogin(@Valid @RequestBody SocialLoginRequestDTO request) {
+        return ApiResponse.ok(authService.socialLoginOrSignup(request));
     }
 
     // 패스워드 재설정 메일 발송

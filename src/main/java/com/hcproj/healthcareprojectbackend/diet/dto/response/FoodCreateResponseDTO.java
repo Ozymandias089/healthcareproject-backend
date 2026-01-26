@@ -10,5 +10,6 @@ public record FoodCreateResponseDTO(
         String name,
         Integer calories,
         Boolean isActive,
+        String message,
         Instant createdAt
 ) {}

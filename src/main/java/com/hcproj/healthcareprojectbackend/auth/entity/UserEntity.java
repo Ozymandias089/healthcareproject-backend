@@ -6,6 +6,8 @@ import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.UUID;
+
 import static com.hcproj.healthcareprojectbackend.global.util.UtilityProvider.normalizeNullable;
 
 @Getter
@@ -48,6 +50,63 @@ public class UserEntity extends BaseTimeEntity {
 
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
+
+    public static UserEntity localRegister(
+            String email,
+            String handle,
+            String passwordHash,
+            String nickname,
+            String phoneNumber,
+            String profileImageUrl
+    ) {
+        validatePrecondition(email, handle, nickname);
+        if (passwordHash == null || passwordHash.isBlank()) throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+
+        return UserEntity.builder()
+                .email(email)
+                .handle(handle)
+                .passwordHash(passwordHash)
+                .nickname(nickname)
+                .phoneNumber(normalizeNullable(phoneNumber))
+                .profileImageUrl(normalizeNullable(profileImageUrl))
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .emailVerified(false)
+                .build();
+    }
+
+    public static UserEntity socialRegister(
+            String email,
+            String handle,
+            String nickname,
+            String phoneNumber,
+            String profileImageUrl
+    ) {
+        validatePrecondition(email, handle, nickname);
+
+        return UserEntity.builder()
+                .email(email)
+                .handle(handle)
+                .passwordHash(null) // 소셜은 비밀번호 없음
+                .nickname(nickname)
+                .phoneNumber(normalizeNullable(phoneNumber))
+                .profileImageUrl(normalizeNullable(profileImageUrl))
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .emailVerified(true) // 소셜은 provider에서 검증된 이메일로 간주
+                .build();
+    }
+
+    public static String newHandle() {
+        // "u_" + 8 chars = 10 chars (<= 20 OK)
+        return "u_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private static void validatePrecondition(String email, String handle, String nickname) {
+        if (email == null || email.isBlank()) throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        if (handle == null || handle.isBlank()) throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        if (nickname == null || nickname.isBlank()) throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+    }
 
     public void changePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;

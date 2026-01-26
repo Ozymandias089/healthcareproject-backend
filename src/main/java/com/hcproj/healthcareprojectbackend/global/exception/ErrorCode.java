@@ -38,6 +38,8 @@ public enum ErrorCode {
     /** 처리되지 않은 예외 등 서버 내부 오류 */
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-500", "서버 오류가 발생했습니다."),
 
+    INVALID_DATA(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-002", "데이터가 유효하지 않습니다."),
+
     // -------------------------
     // Auth/Security
     // -------------------------
@@ -66,6 +68,16 @@ public enum ErrorCode {
     HANDLE_DUPLICATED(HttpStatus.CONFLICT, "AUTH-007", "이미 사용 중인 핸들입니다."),
 
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "AUTH-009", "입력값이 올바르지 않습니다."),
+
+    SOCIAL_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "AUTH-010", "소셜 로그인에 이메일이 필요합니다."),
+
+    SOCIAL_ACCOUNT_TAKEN(HttpStatus.CONFLICT, "AUTH-011", "이미 연동된 프로바이더입니다."),
+
+    SOCIAL_ALREADY_CONNECTED(HttpStatus.CONFLICT, "AUTH-012", "이미 해당 프로바이더를 연동했습니다."),
+
+    SOCIAL_ACCOUNT_NOT_CONNECTED(HttpStatus.BAD_REQUEST, "AUTH-013", "해당 프로바이더가 연결되어있지 않습니다."),
+
+    CANNOT_DISCONNECT_LAST_LOGIN_METHOD(HttpStatus.CONFLICT, "AUTH-014", "마지막 로그인 수단입니다."),
 
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-001", "사용자를 찾을 수 없습니다."),
     // Community (Post/Comment) [추가]

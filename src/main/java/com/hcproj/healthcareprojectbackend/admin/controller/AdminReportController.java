@@ -17,18 +17,18 @@ public class AdminReportController {
 
     private final AdminReportService adminReportService;
 
-    // 신고 목록 조회
+    // 신고 목록 조회 (상태별 + 타입별 필터링)
+    // 예: GET /api/admin/reports?type=POST (게시글 신고만 보기)
     @AdminOnly
     @GetMapping
     public ApiResponse<AdminReportListResponseDTO> getReportList(
-            @RequestParam(name = "status", required = false) String status
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "type", required = false) String type
     ) {
-        return ApiResponse.ok(adminReportService.getReportList(status));
+        return ApiResponse.ok(adminReportService.getReportList(status, type));
     }
 
     // 신고 처리 (통합 API)
-    // PROCESSED 전송 시 -> 신고 처리 + 글 삭제 + 연관 신고 일괄 처리
-    // REJECTED 전송 시 -> 신고 반려 (글 유지)
     @AdminOnly
     @PatchMapping("/{reportId}/status")
     public ApiResponse<MessageResponseDTO> updateReportStatus(

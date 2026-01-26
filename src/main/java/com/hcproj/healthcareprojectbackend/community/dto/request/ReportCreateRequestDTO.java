@@ -4,9 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record ReportCreateRequestDTO(
-        @NotBlank(message = "신고자 핸들은 필수입니다.")
-        String reporterHandle,
-
         @NotBlank(message = "신고 유형(COMMENT/POST)은 필수입니다.")
         String type, // "COMMENT" or "POST"
 
