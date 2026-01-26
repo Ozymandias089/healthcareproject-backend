@@ -90,8 +90,7 @@ public class AdminReportService {
                     return AdminReportListResponseDTO.AdminReportItemDTO.builder()
                             .reportId(report.getReportId())
                             .reporterHandle(reporter != null ? reporter.getNickname() : "알 수 없음") // 신고자 닉네임
-                            .targetAuthorHandle(targetAuthorHandle) // [수정] 여기에 위에서 구한 변수를 넣어야 함!
-                            // .map(UserEntity::getNickname) <--- [삭제] 이 줄이 에러 원인이었습니다.
+                            .targetAuthorHandle(targetAuthorHandle)
                             .type(report.getType())
                             .targetId(report.getTargetId())
                             .reason(report.getReason())
