@@ -115,4 +115,19 @@ public class FoodService {
                 .createdAt(saved.getCreatedAt())
                 .build();
     }
+    /**
+     * 음식 삭제 (관리자 전용)
+     */
+    @Transactional
+    public FoodCreateResponseDTO deleteFood(Long foodId) {
+        FoodEntity food = foodRepository.findById(foodId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FOOD_NOT_FOUND));
+
+        foodRepository.delete(food);
+
+        return FoodCreateResponseDTO.builder()
+                .foodId(foodId)
+                .message("음식이 삭제되었습니다.")
+                .build();
+    }
 }

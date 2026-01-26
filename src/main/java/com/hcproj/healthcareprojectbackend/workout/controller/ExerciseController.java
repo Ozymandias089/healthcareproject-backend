@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 @RestController
 @RequiredArgsConstructor
@@ -55,5 +56,16 @@ public class ExerciseController {
             @Valid @RequestBody ExerciseCreateRequestDTO request
     ) {
         return ApiResponse.created(exerciseService.createExercise(request));
+    }
+    /**
+     * 운동 삭제 API (관리자 전용)
+     * DELETE /api/exercises/{exerciseId}
+     */
+    @AdminOnly
+    @DeleteMapping("/{exerciseId}")
+    public ApiResponse<ExerciseCreateResponseDTO> deleteExercise(
+            @PathVariable Long exerciseId
+    ) {
+        return ApiResponse.ok(exerciseService.deleteExercise(exerciseId));
     }
 }

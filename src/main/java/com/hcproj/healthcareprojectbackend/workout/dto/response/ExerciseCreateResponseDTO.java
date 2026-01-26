@@ -9,5 +9,6 @@ public record ExerciseCreateResponseDTO(
         Long exerciseId,
         String name,
         Boolean isActive,
+        String message,
         Instant createdAt
 ) {}

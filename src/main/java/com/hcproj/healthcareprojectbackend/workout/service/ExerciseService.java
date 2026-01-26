@@ -143,5 +143,20 @@ public class ExerciseService {
                 .createdAt(saved.getCreatedAt())
                 .build();
     }
+    /**
+     * 운동 삭제 (관리자 전용)
+     */
+    @Transactional
+    public ExerciseCreateResponseDTO deleteExercise(Long exerciseId) {
+        ExerciseEntity exercise = exerciseRepository.findById(exerciseId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EXERCISE_NOT_FOUND));
+
+        exerciseRepository.delete(exercise);
+
+        return ExerciseCreateResponseDTO.builder()
+                .exerciseId(exerciseId)
+                .message("운동이 삭제되었습니다.")
+                .build();
+    }
 }
 

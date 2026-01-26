@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 /**
  * 음식(Food) 관련 API 컨트롤러.
@@ -62,5 +63,16 @@ public class FoodController {
             @Valid @RequestBody FoodCreateRequestDTO request
     ) {
         return ApiResponse.created(foodService.createFood(request));
+    }
+    /**
+     * 음식 삭제 API (관리자 전용)
+     * DELETE /api/foods/{foodId}
+     */
+    @AdminOnly
+    @DeleteMapping("/{foodId}")
+    public ApiResponse<FoodCreateResponseDTO> deleteFood(
+            @PathVariable Long foodId
+    ) {
+        return ApiResponse.ok(foodService.deleteFood(foodId));
     }
 }
