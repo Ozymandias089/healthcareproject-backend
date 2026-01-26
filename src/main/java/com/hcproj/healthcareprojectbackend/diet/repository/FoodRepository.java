@@ -1,10 +1,12 @@
 package com.hcproj.healthcareprojectbackend.diet.repository;
 
 import com.hcproj.healthcareprojectbackend.diet.entity.FoodEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,4 +33,23 @@ public interface FoodRepository extends JpaRepository<FoodEntity, Long> {
             @Param("keyword") String keyword,
             @Param("limit") int limit
     );
+
+    // allergy_codes가 null이거나 비어있거나, 특정 코드가 포함되지 않은 것만
+    // Oracle 기준: LOWER + LIKE 조합
+    @Query("""
+        select f
+        from FoodEntity f
+        where f.isActive = true
+          and (
+              f.allergyCodes is null
+              or f.allergyCodes = ''
+              or lower(f.allergyCodes) not like concat('%', lower(:code), '%')
+          )
+        """)
+    List<FoodEntity> findActiveExcludingAllergyCode(String code, Pageable pageable);
+
+    // 알레르기 필터 없이 활성만
+    List<FoodEntity> findByIsActiveTrue(Pageable pageable);
+
+    List<FoodEntity> findByFoodIdIn(Collection<Long> foodIds);
 }
