@@ -7,6 +7,7 @@ import com.hcproj.healthcareprojectbackend.auth.service.AuthService;
 import com.hcproj.healthcareprojectbackend.auth.service.EmailVerificationService;
 import com.hcproj.healthcareprojectbackend.auth.service.PasswordResetService;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
+import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -53,9 +54,28 @@ public class AuthController {
 
     // 소셜 로그인 (스펙 확정 전이라 껍데기만)
     @PostMapping("/social/login")
-    public ApiResponse<TokenResponseDTO> socialLogin() {
-        // TODO: provider, code/token payload 확정되면 구현
-        throw new UnsupportedOperationException("Not implemented yet");
+    public ApiResponse<TokenResponseDTO> socialLogin(@Valid @RequestBody SocialLoginRequestDTO request) {
+        return ApiResponse.ok(authService.socialLoginOrSignup(request));
+    }
+
+    // 소셜 연동 (로그인 필요)
+    @PostMapping("/social/connect")
+    public ApiResponse<Void> socialConnect(
+            @CurrentUserId Long userId,
+            @Valid @RequestBody SocialConnectRequestDTO request
+    ) {
+        authService.connectSocial(userId, request);
+        return ApiResponse.ok();
+    }
+
+    // 소셜 연동해제 (로그인 필요)
+    @PostMapping("/social/disconnect")
+    public ApiResponse<Void> socialDisconnect(
+            @CurrentUserId Long userId,
+            @Valid @RequestBody SocialDisconnectRequestDTO request
+    ) {
+        authService.disconnectSocial(userId, request);
+        return ApiResponse.ok();
     }
 
     // 패스워드 재설정 메일 발송
