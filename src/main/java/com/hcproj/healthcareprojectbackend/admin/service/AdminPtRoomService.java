@@ -122,6 +122,8 @@ public class AdminPtRoomService {
                             .roomType(room.getRoomType())
                             .scheduledStartAt(room.getScheduledStartAt())
                             .maxParticipants(room.getMaxParticipants())
+                            .isPrivate(room.getIsPrivate())
+                            .entryCode(room.getEntryCode())
                             .status(room.getStatus())
                             .createdAt(room.getCreatedAt())
                             .build();
