@@ -232,7 +232,7 @@ public class CalendarSummaryService {
                 userId,
                 PtParticipantStatus.JOINED, // 너희 enum 실제값에 맞춰
                 PtRoomType.RESERVED,
-                List.of(PtRoomStatus.SCHEDULED),// 라이브, 종료
+                List.of(PtRoomStatus.SCHEDULED, PtRoomStatus.LIVE, PtRoomStatus.ENDED, PtRoomStatus.FORCE_CLOSED, PtRoomStatus.CANCELLEzD),// 라이브, 종료
                 startInclusive,
                 endExclusive
         );
@@ -320,7 +320,7 @@ public class CalendarSummaryService {
                 userId,
                 PtParticipantStatus.JOINED,
                 PtRoomType.RESERVED,
-                List.of(PtRoomStatus.SCHEDULED), // TODO: 라이브, 종료여부 반환해야 함.
+                List.of(PtRoomStatus.SCHEDULED, PtRoomStatus.LIVE, PtRoomStatus.ENDED, PtRoomStatus.FORCE_CLOSED, PtRoomStatus.CANCELLED), // TODO: 라이브, 종료여부 반환해야 함.
                 startInclusive,
                 endExclusive
         );
