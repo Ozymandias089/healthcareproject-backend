@@ -5,6 +5,7 @@ import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUse
 import com.hcproj.healthcareprojectbackend.me.dto.request.WithdrawalRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MeResponseDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MessageResponseDTO;
+import com.hcproj.healthcareprojectbackend.me.dto.response.TrainerInfoResponseDTO;
 import com.hcproj.healthcareprojectbackend.me.service.MeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,5 +43,10 @@ public class MeController {
     ) {
         meService.withdraw(userId, request);
         return ApiResponse.ok(new MessageResponseDTO("WITHDRAWAL_SUCCESS"));
+    }
+
+    @GetMapping("/trainer")
+    public ApiResponse<TrainerInfoResponseDTO> getTrainerInfo(@CurrentUserId Long userId) {
+        return ApiResponse.ok(meService.getTrainerInfo(userId));
     }
 }

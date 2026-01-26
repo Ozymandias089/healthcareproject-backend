@@ -1,11 +1,14 @@
 package com.hcproj.healthcareprojectbackend.auth.service;
 
+import com.hcproj.healthcareprojectbackend.auth.social.SocialOAuthClient;
+import com.hcproj.healthcareprojectbackend.auth.social.SocialProfile;
 import com.hcproj.healthcareprojectbackend.auth.dto.request.*;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.EmailCheckResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.dto.response.TokenResponseDTO;
+import com.hcproj.healthcareprojectbackend.auth.entity.SocialAccountEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
-import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
+import com.hcproj.healthcareprojectbackend.auth.repository.SocialAccountRepository;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
@@ -56,6 +59,8 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final RefreshTokenStore refreshTokenStore;
     private final TokenVersionStore tokenVersionStore;
+    private final SocialAccountRepository socialAccountRepository;
+    private final SocialOAuthClient socialOAuthClient;
 
     /**
      * 일반 회원가입.
@@ -77,19 +82,17 @@ public class AuthService {
         }
 
         // handle 임시값 사용
-        String handle = "u_" + UUID.randomUUID().toString().substring(0, 8);
+        String handle = UserEntity.newHandle();
 
         // 비밀번호는 평문 저장 금지 -> BCrypt 등으로 해시 처리
-        UserEntity user = UserEntity.builder()
-                .email(normalizeEmail(request.email()))
-                .handle(handle)
-                .passwordHash(passwordEncoder.encode(request.password()))
-                .nickname(request.nickname())
-                .phoneNumber(request.phoneNumber())
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .profileImageUrl(request.profileImageUrl())
-                .build();
+        UserEntity user = UserEntity.localRegister(
+                normalizeEmail(request.email()),
+                handle,
+                passwordEncoder.encode(request.password()),
+                request.nickname(),
+                request.phoneNumber(),
+                request.profileImageUrl()
+        );
 
         UserEntity saved = userRepository.save(user);
 
@@ -129,6 +132,60 @@ public class AuthService {
         }
 
         if (user.getStatus().equals(UserStatus.WITHDRAWN)) throw new BusinessException(ErrorCode.ALREADY_WITHDRAWN);
+
+        return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
+    }
+
+    @Transactional
+    public TokenResponseDTO socialLoginOrSignup(SocialLoginRequestDTO request) {
+        SocialProfile profile = socialOAuthClient.fetchProfile(request.provider(), request.accessToken());
+
+        // 1) provider_user_id로 기존 연동 존재하면 -> 해당 user 로그인
+        var existingLink = socialAccountRepository.findByProviderAndProviderUserId(
+                request.provider(), profile.providerUserId()
+        );
+
+        if (existingLink.isPresent()) {
+            Long userId = existingLink.get().getUserId();
+            UserEntity user = userRepository.findById(userId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+            if (user.getStatus() == UserStatus.WITHDRAWN) throw new BusinessException(ErrorCode.ALREADY_WITHDRAWN);
+
+            return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
+        }
+
+        // 2) 신규 가입 처리
+        // 정책: 소셜 가입에 이메일 필수로 할지? (지금 users.email not null + unique라서 사실상 필수)
+        if (profile.email() == null || profile.email().isBlank()) {
+            throw new BusinessException(ErrorCode.SOCIAL_EMAIL_REQUIRED);
+        }
+
+        String email = normalizeEmail(profile.email());
+
+        // 이메일이 이미 로컬/다른 소셜로 가입된 유저라면:
+        // 정책 선택지가 있음.
+        // A) 자동으로 그 유저에 "연동"으로 붙여준다 (권장)
+        // B) 충돌로 막고 프론트에 "로그인 후 연동하세요" 안내
+        // 여기서는 A(자동 연동)로 처리해볼게.
+        UserEntity user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null) {
+            String handle = UserEntity.newHandle();
+            user = UserEntity.socialRegister(
+                    email,
+                    handle,
+                    // nickname은 provider 값이 비어있을 수 있으니 fallback을 두는게 안전
+                    (profile.nickname() == null || profile.nickname().isBlank()) ? "user" : profile.nickname(),
+                    null,
+                    profile.profileImageUrl()
+            );
+            user = userRepository.save(user);
+        }
+
+        // 3) 소셜 연결 저장 (중복/경합은 unique 제약이 잡아줌)
+        SocialAccountEntity link = SocialAccountEntity.connect(user.getId(), request.provider(), profile.providerUserId());
+        socialAccountRepository.save(link);
 
         return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
     }

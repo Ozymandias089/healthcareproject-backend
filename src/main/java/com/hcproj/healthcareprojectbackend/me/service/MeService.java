@@ -1,5 +1,6 @@
 package com.hcproj.healthcareprojectbackend.me.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
@@ -10,12 +11,15 @@ import com.hcproj.healthcareprojectbackend.me.dto.internal.InjuriesRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.internal.ProfileDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.request.*;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MeResponseDTO;
+import com.hcproj.healthcareprojectbackend.me.dto.response.TrainerInfoResponseDTO;
 import com.hcproj.healthcareprojectbackend.profile.entity.AllergyType;
 import com.hcproj.healthcareprojectbackend.profile.entity.InjuryLevel;
 import com.hcproj.healthcareprojectbackend.profile.entity.UserInjuryEntity;
 import com.hcproj.healthcareprojectbackend.profile.entity.UserProfileEntity;
 import com.hcproj.healthcareprojectbackend.profile.repository.UserInjuryRepository;
 import com.hcproj.healthcareprojectbackend.profile.repository.UserProfileRepository;
+import com.hcproj.healthcareprojectbackend.trainer.entity.TrainerInfoEntity;
+import com.hcproj.healthcareprojectbackend.trainer.repository.TrainerInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,6 +41,8 @@ public class MeService {
     private final TokenVersionStore tokenVersionStore;
     private final UserProfileRepository userProfileRepository;
     private final UserInjuryRepository userInjuryRepository;
+    private final TrainerInfoRepository trainerInfoRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public MeResponseDTO getMe(Long userId) {
@@ -180,4 +186,32 @@ public class MeService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public TrainerInfoResponseDTO getTrainerInfo(Long userId) {
+        UserEntity user = getUserOrThrow(userId);
+        TrainerInfoEntity tInfo = trainerInfoRepository.findById(user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return TrainerInfoResponseDTO.builder()
+                .applicationStatus(tInfo.getApplicationStatus())
+                .licenseUrlsJson(parseLicenseUrls(tInfo.getLicenseUrlsJson()))
+                .bio(tInfo.getBio())
+                .rejectReason(tInfo.getRejectReason())
+                .approvedAt(tInfo.getApprovedAt())
+                .build();
+    }
+
+    private List<String> parseLicenseUrls(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(
+                    json,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {}
+            );
+        } catch (Exception e) {
+            // 데이터 깨졌을 때 방어
+            throw new BusinessException(ErrorCode.INVALID_DATA);
+        }
+    }
 }
