@@ -3,6 +3,8 @@ package com.hcproj.healthcareprojectbackend.admin.controller;
 import com.hcproj.healthcareprojectbackend.admin.dto.request.AdminPromoteRequestDTO;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminUserListResponseDTO;
 import com.hcproj.healthcareprojectbackend.admin.service.AdminUserService;
+import com.hcproj.healthcareprojectbackend.admin.dto.request.UserStatusUpdateRequestDTO;
+import com.hcproj.healthcareprojectbackend.admin.dto.response.UserStatusUpdateResponseDTO;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.AdminOnly;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MessageResponseDTO;
@@ -34,5 +36,16 @@ public class AdminUserController {
     public ApiResponse<MessageResponseDTO> promoteUser(@Valid @RequestBody AdminPromoteRequestDTO request) {
         adminUserService.promoteToAdmin(request.targetHandle());
         return ApiResponse.ok(new MessageResponseDTO("USER_PROMOTED_TO_ADMIN"));
+    }
+
+    // 3. 회원 상태 변경 (차단/해제)
+    @AdminOnly
+    @PatchMapping("/{userId}/status")
+    public ApiResponse<UserStatusUpdateResponseDTO> updateUserStatus(
+            @PathVariable Long userId,
+            @RequestBody UserStatusUpdateRequestDTO request
+    ) {
+        UserStatusUpdateResponseDTO response = adminUserService.updateUserStatus(userId, request);
+        return ApiResponse.ok(response);
     }
 }

@@ -164,4 +164,9 @@ public class UserEntity extends BaseTimeEntity {
         if (!emailVerified) return;
         this.emailVerified = false;
     }
+
+    public void updateStatus(UserStatus newStatus) {
+        if (this.status == newStatus) return; // 이미 같은 상태면 무시
+        this.status = newStatus;
+    }
 }
