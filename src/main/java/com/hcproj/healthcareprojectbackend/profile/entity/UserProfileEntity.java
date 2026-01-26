@@ -42,7 +42,19 @@ public class UserProfileEntity extends BaseTimeEntity {
     @Column(name = "session_minutes")
     private Integer sessionMinutes;
 
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "user_profile_allergies",
+            joinColumns = @JoinColumn(name = "user_id")
+    )
     @Enumerated(EnumType.STRING)
-    @Column(name = "profile_allergies")
+    @Column(name = "allergy", length = 30, nullable = false)
     private List<AllergyType> allergies;
+
+    public void changeAllergies(List<AllergyType> newAllergies) {
+        this.allergies.clear();
+        if (newAllergies != null && !newAllergies.isEmpty()) {
+            this.allergies.addAll(newAllergies);
+        }
+    }
 }
