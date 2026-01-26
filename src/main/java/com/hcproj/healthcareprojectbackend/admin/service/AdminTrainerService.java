@@ -3,7 +3,7 @@ package com.hcproj.healthcareprojectbackend.admin.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hcproj.healthcareprojectbackend.admin.dto.response.TrainerPendingListResponseDTO;
+import com.hcproj.healthcareprojectbackend.trainer.dto.response.TrainerPendingListResponseDTO;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.TrainerRejectResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;

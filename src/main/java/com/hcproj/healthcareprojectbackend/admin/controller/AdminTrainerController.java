@@ -1,7 +1,7 @@
 package com.hcproj.healthcareprojectbackend.admin.controller;
 
 import com.hcproj.healthcareprojectbackend.admin.dto.request.TrainerRejectRequestDTO;
-import com.hcproj.healthcareprojectbackend.admin.dto.response.TrainerPendingListResponseDTO;
+import com.hcproj.healthcareprojectbackend.trainer.dto.response.TrainerPendingListResponseDTO;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.TrainerRejectResponseDTO;
 import com.hcproj.healthcareprojectbackend.admin.service.AdminTrainerService;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;

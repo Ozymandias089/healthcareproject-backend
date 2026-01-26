@@ -1,4 +1,4 @@
-package com.hcproj.healthcareprojectbackend.admin.dto.response;
+package com.hcproj.healthcareprojectbackend.trainer.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
