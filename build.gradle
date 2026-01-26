@@ -45,6 +45,13 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	// SMTP
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
+	// ========================================
+	implementation platform('software.amazon.awssdk:bom:2.25.0')
+	implementation 'software.amazon.awssdk:s3'
+
+	// AI
+	implementation platform("org.springframework.ai:spring-ai-bom:1.1.2")
+	implementation "org.springframework.ai:spring-ai-starter-model-openai"
 }
 
 tasks.named('test') {

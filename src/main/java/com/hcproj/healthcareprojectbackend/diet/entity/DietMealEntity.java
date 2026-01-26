@@ -18,6 +18,9 @@ public class DietMealEntity {
     @Column(name = "diet_meal_id")
     private Long dietMealId;
 
+    @Column(name = "diet_meal_title", nullable = false)
+    private String title;
+
     @Column(name = "diet_day_id", nullable = false)
     private Long dietDayId;
 

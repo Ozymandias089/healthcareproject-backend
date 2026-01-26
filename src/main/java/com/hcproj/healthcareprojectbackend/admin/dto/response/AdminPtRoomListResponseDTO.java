@@ -17,6 +17,7 @@ public record AdminPtRoomListResponseDTO(
             Long ptRoomId,
             TrainerDTO trainer,
             String title,
+            String description,
             PtRoomType roomType,
             Instant scheduledStartAt,
             Integer maxParticipants,

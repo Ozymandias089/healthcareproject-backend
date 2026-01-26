@@ -40,6 +40,12 @@ public enum ErrorCode {
 
     INVALID_DATA(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-002", "데이터가 유효하지 않습니다."),
 
+    AI_JSON_PARSE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI-001", "Json 파싱 실패"),
+
+    AI_ALLOWED_FOODS_BUILD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI-002", "AI 음식 화이트리스트 빌드 실패"),
+
+    AI_INVALID_OUTPUT(HttpStatus.INTERNAL_SERVER_ERROR, "AI-003", "AI 산출물이 유효하지 않음."),
+
     // -------------------------
     // Auth/Security
     // -------------------------
@@ -159,6 +165,16 @@ public enum ErrorCode {
     TRAINER_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-005", "트레이너 신청 내역이 없습니다."),
     TRAINER_REJECT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "ADMIN-006", "거절 사유를 입력해주세요."),
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-007", "신고 내역을 찾을 수 없습니다.");
+  
+    /* ===========================================
+     * Upload (UPLOAD-xxx)
+     * =========================================== */
+    INVALID_UPLOAD_TYPE(HttpStatus.BAD_REQUEST, "UPLOAD-001", "지원하지 않는 업로드 타입입니다."),
+    INVALID_FILE_EXTENSION(HttpStatus.BAD_REQUEST, "UPLOAD-002", "지원하지 않는 파일 형식입니다."),
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "UPLOAD-003", "파일 크기가 10MB를 초과합니다."),
+    PRESIGNED_URL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "UPLOAD-004", "업로드 URL 생성에 실패했습니다.");
+
+
 
     private final HttpStatus status;
     private final String code;
