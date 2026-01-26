@@ -118,6 +118,7 @@ public class AdminPtRoomService {
                                     .handle(trainer != null ? trainer.getHandle() : "unknown")
                                     .build())
                             .title(room.getTitle())
+                            .description(room.getDescription())
                             .roomType(room.getRoomType())
                             .scheduledStartAt(room.getScheduledStartAt())
                             .maxParticipants(room.getMaxParticipants())
