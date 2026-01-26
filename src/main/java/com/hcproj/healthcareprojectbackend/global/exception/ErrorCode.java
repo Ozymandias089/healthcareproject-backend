@@ -147,7 +147,15 @@ public enum ErrorCode {
     ALREADY_EXISTS(HttpStatus.CONFLICT, "COMMON-409", "이미 존재하는 데이터입니다."),
 
     /** 트레이너 권한 부족 */
-    NOT_TRAINER(HttpStatus.FORBIDDEN, "TRAINER-001", "트레이너 권한이 필요합니다.");
+    NOT_TRAINER(HttpStatus.FORBIDDEN, "TRAINER-001", "트레이너 권한이 필요합니다."),
+
+    /* ===========================================
+     * Upload (UPLOAD-xxx)
+     * =========================================== */
+    INVALID_UPLOAD_TYPE(HttpStatus.BAD_REQUEST, "UPLOAD-001", "지원하지 않는 업로드 타입입니다."),
+    INVALID_FILE_EXTENSION(HttpStatus.BAD_REQUEST, "UPLOAD-002", "지원하지 않는 파일 형식입니다."),
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "UPLOAD-003", "파일 크기가 10MB를 초과합니다."),
+    PRESIGNED_URL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "UPLOAD-004", "업로드 URL 생성에 실패했습니다.");
 
 
 
