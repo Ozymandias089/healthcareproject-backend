@@ -6,5 +6,7 @@ import jakarta.validation.constraints.NotNull;
 
 public record SocialLoginRequestDTO(
         @NotNull SocialProvider provider,
-        @NotBlank String accessToken
+        @NotBlank String code,
+        @NotBlank String redirectUri,
+        String state // NAVER용 (없으면 null)
 ) {}

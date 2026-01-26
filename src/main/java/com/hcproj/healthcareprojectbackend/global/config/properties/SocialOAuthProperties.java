@@ -15,16 +15,25 @@ public class SocialOAuthProperties {
 
     @Getter @Setter
     public static class Google {
-        private String userinfoUrl;
+        private String clientId;
+        private String clientSecret;
+        private String tokenUrl;     // https://oauth2.googleapis.com/token
+        private String userinfoUrl;  // https://openidconnect.googleapis.com/v1/userinfo
     }
 
     @Getter @Setter
     public static class Kakao {
-        private String meUrl;
+        private String clientId;     // REST API 키
+        private String clientSecret; // 선택 (ON 했으면 필수)
+        private String tokenUrl;     // https://kauth.kakao.com/oauth/token
+        private String meUrl;        // https://kapi.kakao.com/v2/user/me
     }
 
     @Getter @Setter
     public static class Naver {
-        private String meUrl;
+        private String clientId;
+        private String clientSecret;
+        private String tokenUrl;     // https://nid.naver.com/oauth2.0/token
+        private String meUrl;        // https://openapi.naver.com/v1/nid/me
     }
 }
