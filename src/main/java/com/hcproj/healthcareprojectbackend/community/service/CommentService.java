@@ -2,6 +2,7 @@ package com.hcproj.healthcareprojectbackend.community.service;
 
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
+import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.community.dto.request.CommentCreateRequestDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.request.CommentUpdateRequestDTO;
@@ -37,8 +38,16 @@ public class CommentService {
      */
     @Transactional
     public CommentCreateResponseDTO createComment(Long userId, Long postId, CommentCreateRequestDTO request) {
-        if (!userRepository.existsById(userId)) throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        // [수정됨 1] existsById 대신 findById로 유저 정보를 가져와야 합니다.
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         if (!postRepository.existsById(postId)) throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+
+        // [수정됨 2] 가져온 user 변수로 상태 확인
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new BusinessException(ErrorCode.USER_SUSPENDED);
+        }
 
         // 대댓글인 경우 부모 댓글 검증
         if (request.parentId() != null) {

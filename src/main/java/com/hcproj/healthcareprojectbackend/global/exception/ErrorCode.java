@@ -87,6 +87,8 @@ public enum ErrorCode {
 
     CANNOT_DISCONNECT_LAST_LOGIN_METHOD(HttpStatus.CONFLICT, "AUTH-014", "마지막 로그인 수단입니다."),
 
+    USER_SUSPENDED(HttpStatus.FORBIDDEN, "AUTH-015", "이용이 정지된 계정입니다."),
+
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-001", "사용자를 찾을 수 없습니다."),
     // Community (Post/Comment) [추가]
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMUNITY-001", "게시글을 찾을 수 없습니다."),

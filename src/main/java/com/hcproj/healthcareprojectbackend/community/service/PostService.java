@@ -2,6 +2,7 @@ package com.hcproj.healthcareprojectbackend.community.service;
 
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
+import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.community.dto.request.PostCreateRequestDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.request.PostUpdateRequestDTO;
@@ -106,6 +107,11 @@ public class PostService {
     public PostResponseDTO createPost(Long userId, PostCreateRequestDTO request) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // [추가됨] 🛑 정지된 회원이면 에러 발생!
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new BusinessException(ErrorCode.USER_SUSPENDED);
+        }
 
         PostEntity post = PostEntity.builder()
                 .userId(userId)
