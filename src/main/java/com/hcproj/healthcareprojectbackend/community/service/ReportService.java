@@ -37,18 +37,37 @@ public class ReportService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // 3. 신고 대상 존재 여부 확인 (객체 조회 없이 ID 검증만 수행)
+        // 3. 신고 대상 조회 및 검증
         if (type == ReportType.POST) {
-            if (!postRepository.existsById(request.id())) {
-                throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+            PostEntity post = postRepository.findById(request.id())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+            // [방어 1] 본인 게시글 신고 불가
+            if (post.getUserId().equals(userId)) {
+                throw new BusinessException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
             }
+
+            // [방어 2] 공지사항(isNotice) 신고 불가 (수정됨!)
+            if (Boolean.TRUE.equals(post.getIsNotice())) {
+                throw new BusinessException(ErrorCode.NOTICE_REPORT_NOT_ALLOWED);
+            }
+
         } else if (type == ReportType.COMMENT) {
-            if (!commentRepository.existsById(request.id())) {
-                throw new BusinessException(ErrorCode.COMMENT_NOT_FOUND);
+            CommentEntity comment = commentRepository.findById(request.id())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+            // [방어 3] 본인 댓글 신고 불가
+            if (comment.getUserId().equals(userId)) {
+                throw new BusinessException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
+            }
+
+            // [추가] 중복 신고 방지
+            if (reportRepository.existsByReporterIdAndTargetIdAndType(userId, request.id(), type)) {
+                throw new BusinessException(ErrorCode.ALREADY_REPORTED);
             }
         }
 
-        // 4. 신고 저장 (ID만 저장)
+        // 4. 신고 저장
         ReportEntity report = ReportEntity.builder()
                 .reporterId(userId)
                 .type(type)

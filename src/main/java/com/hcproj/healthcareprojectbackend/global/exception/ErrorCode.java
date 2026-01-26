@@ -89,13 +89,15 @@ public enum ErrorCode {
     // Community (Post/Comment) [추가]
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMUNITY-001", "게시글을 찾을 수 없습니다."),
     NOT_POST_AUTHOR(HttpStatus.FORBIDDEN, "COMMUNITY-002", "게시글 수정/삭제 권한이 없습니다."),
-
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "C001", "댓글을 찾을 수 없습니다."),
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "G001", "잘못된 입력값입니다."),
     NOT_COMMENT_AUTHOR(HttpStatus.FORBIDDEN, "C002", "댓글 작성자만 수정/삭제할 수 있습니다."),
-
+    SELF_REPORT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "C003", "본인의 게시글/댓글은 신고할 수 없습니다."),
+    NOTICE_REPORT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "C004", "공지사항은 신고할 수 없습니다."),
+    ALREADY_REPORTED(HttpStatus.BAD_REQUEST, "C005", "이미 신고한 게시글/댓글입니다."),
     INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "INVALID_STATUS_TRANSITION", "유효하지 않은 상태 변경 요청입니다."),
 
+    // pt
     RESERVATION_NOT_ALLOWED(HttpStatus.CONFLICT, "R001", "예약이 불가능한 상태입니다."), // 방이 종료/취소됨
     ROOM_FULL(HttpStatus.CONFLICT, "R002", "방의 정원이 초과되었습니다."),
     ALREADY_RESERVED(HttpStatus.CONFLICT, "R003", "이미 예약된 상태입니다."), // (선택적 사용)
@@ -155,6 +157,15 @@ public enum ErrorCode {
     /** 트레이너 권한 부족 */
     NOT_TRAINER(HttpStatus.FORBIDDEN, "TRAINER-001", "트레이너 권한이 필요합니다."),
 
+    // admin
+    ADMIN_FORBIDDEN(HttpStatus.FORBIDDEN, "ADMIN-001", "관리자 권한이 없습니다."),
+    USER_ALREADY_BANNED(HttpStatus.CONFLICT, "ADMIN-002", "이미 차단된 회원입니다."),
+    USER_NOT_BANNED(HttpStatus.CONFLICT, "ADMIN-003", "차단되지 않은 회원입니다."),
+    CANNOT_BAN_ADMIN(HttpStatus.FORBIDDEN, "ADMIN-004", "관리자는 차단할 수 없습니다."),
+    TRAINER_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-005", "트레이너 신청 내역이 없습니다."),
+    TRAINER_REJECT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "ADMIN-006", "거절 사유를 입력해주세요."),
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-007", "신고 내역을 찾을 수 없습니다.");
+  
     /* ===========================================
      * Upload (UPLOAD-xxx)
      * =========================================== */
