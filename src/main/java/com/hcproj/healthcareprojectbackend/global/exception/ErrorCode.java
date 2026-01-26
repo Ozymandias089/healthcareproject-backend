@@ -40,6 +40,12 @@ public enum ErrorCode {
 
     INVALID_DATA(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-002", "데이터가 유효하지 않습니다."),
 
+    AI_JSON_PARSE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI-001", "Json 파싱 실패"),
+
+    AI_ALLOWED_FOODS_BUILD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI-002", "AI 음식 화이트리스트 빌드 실패"),
+
+    AI_INVALID_OUTPUT(HttpStatus.INTERNAL_SERVER_ERROR, "AI-003", "AI 산출물이 유효하지 않음."),
+
     // -------------------------
     // Auth/Security
     // -------------------------
