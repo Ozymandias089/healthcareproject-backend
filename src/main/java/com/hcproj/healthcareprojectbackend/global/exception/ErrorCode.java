@@ -46,6 +46,8 @@ public enum ErrorCode {
 
     AI_INVALID_OUTPUT(HttpStatus.INTERNAL_SERVER_ERROR, "AI-003", "AI 산출물이 유효하지 않음."),
 
+    AI_ALLOWED_EXERCISES_BUILD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI-004", "AI 운동 화이트리스트 빌드 실패"),
+
     // -------------------------
     // Auth/Security
     // -------------------------
