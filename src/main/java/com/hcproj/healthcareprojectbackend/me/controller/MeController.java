@@ -2,7 +2,6 @@ package com.hcproj.healthcareprojectbackend.me.controller;
 
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
-import com.hcproj.healthcareprojectbackend.me.dto.request.WithdrawalRequestDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MeResponseDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.MessageResponseDTO;
 import com.hcproj.healthcareprojectbackend.me.dto.response.TrainerInfoResponseDTO;
@@ -37,11 +36,8 @@ public class MeController {
      * DELETE /api/me
      */
     @DeleteMapping(consumes = "application/json", produces = "application/json")
-    public ApiResponse<MessageResponseDTO> withdraw(
-            @CurrentUserId Long userId,
-            @Valid @RequestBody WithdrawalRequestDTO request
-    ) {
-        meService.withdraw(userId, request);
+    public ApiResponse<MessageResponseDTO> withdraw(@CurrentUserId Long userId) {
+        meService.withdraw(userId);
         return ApiResponse.ok(new MessageResponseDTO("WITHDRAWAL_SUCCESS"));
     }
 
