@@ -17,7 +17,7 @@ import java.util.List;
 public record DietAiWeekPlanResult(
         LocalDate startDate,
         LocalDate endDate,
-        String consideration,
+        List<String> considerations,
         List<Day> days
 ) {
     /** 특정 날짜의 식단. */

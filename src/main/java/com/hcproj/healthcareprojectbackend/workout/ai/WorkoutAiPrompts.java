@@ -45,17 +45,17 @@ Schema:
     {
       "logDate":"YYYY-MM-DD",
       "title":string,
-      "totalMinutes":number,
+      "totalMinutes":integer,
       "items":[
         {
-          "displayOrder":number,
-          "exerciseId":number,
-          "sets":number|null,
-          "reps":number|null,
-          "restSecond":number|null,
-          "durationMinutes":number|null,
+          "displayOrder":integer,
+          "exerciseId":integer,
+          "sets":integer|null,
+          "reps":integer|null,
+          "restSecond":integer|null,
+          "durationMinutes":integer|null,
           "distanceKm":number|null,
-          "rpe":number|null,
+          "rpe":integer|null,
           "amount":string|null
         }
       ]
@@ -64,13 +64,17 @@ Schema:
 }
 
 Rules:
-- Generate routines ONLY for the given dates.
+- Generate routines ONLY for the given dates (no extra dates, no missing dates, no duplicates).
+- days must contain exactly the same dates as the input dates.
+- For each day, items must not be empty.
 - displayOrder starts at 0 and is contiguous per day.
-- totalMinutes should be a reasonable estimate (30~90).
+- totalMinutes must be a reasonable estimate between 30 and 90 (integer).
+- considerations must be an array of 2 to 3 Korean sentences.
+
 Language rules:
-- title must be Korean (Hangul). No English words.
-- considerations must be Korean.
-- amount (if present) should be Korean.
+- title must be Korean and must not contain English letters (A-Z, a-z)
+- considerations must be Korean and must not contain English letters (A-Z, a-z)
+- amount (if present) must be Korean and must not contain English letters (A-Z, a-z)
 """;
 
     /**

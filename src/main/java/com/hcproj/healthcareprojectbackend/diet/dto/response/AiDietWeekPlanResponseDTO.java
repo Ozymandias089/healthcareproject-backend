@@ -7,7 +7,7 @@ import java.util.List;
 public record AiDietWeekPlanResponseDTO(
         LocalDate startDate,
         LocalDate endDate,
-        String consideration,
+        List<String> considerations,
         List<Day> days,
         PageInfo pageInfo
 ) {

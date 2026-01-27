@@ -44,16 +44,16 @@ Schema:
 {
   "startDate":"YYYY-MM-DD",
   "endDate":"YYYY-MM-DD",
-  "consideration":string,
+  "considerations":[string],
   "days":[
     {
       "logDate":"YYYY-MM-DD",
       "meals":[
         {
-          "displayOrder":number,
+          "displayOrder":integer,
           "title":string,
           "items":[
-            {"foodId":number,"count":number}
+            {"foodId":integer,"count":integer}
           ]
         }
       ]
@@ -62,14 +62,19 @@ Schema:
 }
 
 Rules:
-- Exactly 7 days: startDate..startDate+6
-- Use 3~5 meals per day
-- displayOrder starts at 0 and is contiguous
-- Count must be a positive integer
+- Exactly 7 days: startDate..startDate+6 (inclusive)
+- endDate must equal startDate+6
+- days must contain exactly 7 entries (no missing dates, no duplicates)
+- Use 3 to 5 meals per day
+- displayOrder starts at 0 and is contiguous per day
+- Each meal must have at least 1 item
+- foodId must be one of allowedFoods[].id
+- count must be a positive integer (>= 1)
+- considerations must be an array of 2 to 3 Korean sentences
+
 Language rules:
-- title must be Korean (Hangul). No English words.
-- considerations must be Korean.
-- amount (if present) should be Korean.
+- title must be Korean and must not contain English letters (A-Z, a-z)
+- considerations must be Korean and must not contain English letters (A-Z, a-z)
 """;
 
     /**
