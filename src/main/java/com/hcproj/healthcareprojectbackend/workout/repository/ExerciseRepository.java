@@ -10,7 +10,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 운동(Exercise) 정보에 대한 Repository.
+ *
+ * <p>
+ * 활성화된 운동 조회, 무한 스크롤 목록, 대체 운동 추천 등에 사용된다.
+ * </p>
+ */
 public interface ExerciseRepository extends JpaRepository<ExerciseEntity, Long> {
+
+    /**
+     * 활성화된 모든 운동 조회.
+     */
     List<ExerciseEntity> findAllByIsActiveTrue();
 
     /**
@@ -63,6 +74,12 @@ public interface ExerciseRepository extends JpaRepository<ExerciseEntity, Long> 
             @Param("limit") int limit
     );
 
+    /**
+     * 활성화된 운동 페이지 단위 조회.
+     */
     List<ExerciseEntity> findByIsActiveTrue(Pageable pageable);
+    /**
+     * 여러 운동 ID로 일괄 조회.
+     */
     List<ExerciseEntity> findByExerciseIdIn(Collection<Long> ids);
 }
