@@ -111,6 +111,9 @@ public class FoodService {
                 .foodId(saved.getFoodId())
                 .name(saved.getName())
                 .calories(saved.getCalories())
+                .carbs(saved.getCarbs())
+                .protein(saved.getProtein())
+                .fat(saved.getFat())
                 .isActive(saved.getIsActive())
                 .createdAt(saved.getCreatedAt())
                 .build();
