@@ -11,5 +11,6 @@ public record PostSummaryDto(
         String handle,      // 작성자 핸들
         Instant createdAt,
         Long commentCount,  // 댓글 수 (@Formula로 가져옴)
-        Long viewCount
+        Long viewCount,
+        Long likeCount
 ) {}
