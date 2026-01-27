@@ -185,12 +185,12 @@ public class MeController {
 
 ## Contributors
 
-| Name    | GitHub                                             | Role         | Responsibility                                                                                           |
-|---------|----------------------------------------------------|--------------|----------------------------------------------------------------------------------------------------------|
-| **최영훈** | [@Ozymandias089](https://github.com/Ozymandias089) | Backend Lead | Architecture design, Infrastructure setup, Backend core (Auth, Diet, Workout), AI integration, PR review |
-| **안태호** | [@saesamn](https://github.com//saesamn)            | Backend      | Diet feature development                                                                                 |
-| **이현성** | [@HyunsEEE](https://github.com/HyunsEEE)           | Backend      | Workout feature development                                                                              |
-| **김주영** | [@juyoungck](https://github.com/juyoungck)         | Frontend PM  | UI, API integration                                                                                      |
-| **박중건** | [@qkrwndrjs613](https://github.com/qkrwndrjs613)   | Frontend     | UI, UX                                                                                                   |
-| **백승진** | [@SeungjinB](https://github.com/SeungjinB)         | Frontend     | UI components                                                                                            |
+| Name    | GitHub                                             | Role         | Responsibility                                                                                                             |
+|---------|----------------------------------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------|
+| **최영훈** | [@Ozymandias089](https://github.com/Ozymandias089) | Backend Lead | Architecture design, Infrastructure setup, Backend core (Auth, ME, PT, Calendar, Diet, Workout), AI integration, PR review |
+| **안태호** | [@saesamn](https://github.com//saesamn)            | Backend      | Feature development(Board, PT, Admin)                                                                                      |
+| **이현성** | [@HyunsEEE](https://github.com/HyunsEEE)           | Backend      | Feature development(Workout, Calendar, Admin, S3)                                                                          |
+| **김주영** | [@juyoungck](https://github.com/juyoungck)         | Frontend PM  | UI, UX, API integration                                                                                                    |
+| **박중건** | [@qkrwndrjs613](https://github.com/qkrwndrjs613)   | Frontend     | UI, UX, API Integration                                                                                                    |
+| **백승진** | [@SeungjinB](https://github.com/SeungjinB)         | Frontend     | UI, UX, API Integration                                                                                                    |
 
