@@ -1,10 +1,14 @@
 package com.hcproj.healthcareprojectbackend.community.service;
 
+import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.community.dto.request.PostCreateRequestDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.request.PostUpdateRequestDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostListResponseDTO;
+import java.util.Map;               // Map 클래스를 사용하기 위해 필요
+import java.util.stream.Collectors;
+import com.hcproj.healthcareprojectbackend.community.dto.response.PostSummaryDto;
 import com.hcproj.healthcareprojectbackend.community.entity.PostEntity;
 import com.hcproj.healthcareprojectbackend.community.entity.PostStatus;
 import com.hcproj.healthcareprojectbackend.community.repository.PostRepository;
@@ -53,6 +57,7 @@ public class PostService {
         Pageable pageable = PageRequest.of(0, size);
         List<PostEntity> entities;
 
+        // 1. [기존 검색 로직] 검색어와 필터에 따라 엔티티 리스트 조회
         if (q == null || q.isBlank()) {
             entities = postRepository.findPostList(cursorId, category, pageable);
         } else {
@@ -65,24 +70,38 @@ public class PostService {
             }
         }
 
+        // 2. [추가된 로직] 조회된 게시글들의 작성자 정보를 한꺼번에 조회 (N+1 방지)
+        List<Long> userIds = entities.stream()
+                .map(PostEntity::getUserId)
+                .distinct()
+                .toList();
+
+        Map<Long, com.hcproj.healthcareprojectbackend.auth.entity.UserEntity> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(com.hcproj.healthcareprojectbackend.auth.entity.UserEntity::getId, u -> u));
+
+        // 3. 다음 페이지를 위한 커서 ID 계산
         Long nextCursorId = entities.isEmpty() ? null : entities.get(entities.size() - 1).getPostId();
 
-        List<PostListResponseDTO.PostSimpleDTO> list = entities.stream()
+        // 4. [프론트엔드 요구사항] PostSummaryDto 리스트로 변환 (닉네임, 핸들 포함)
+        List<PostSummaryDto> list = entities.stream()
                 .map(entity -> {
-                    Long views = (entity.getViewCount() != null) ? entity.getViewCount() : 0L;
+                    var author = userMap.get(entity.getUserId());
+                    String nickname = (author != null) ? author.getNickname() : "알 수 없음";
+                    String handle = (author != null) ? author.getHandle() : "";
 
-                    return PostListResponseDTO.PostSimpleDTO.builder()
-                            .postId(entity.getPostId())
-                            .category(entity.getCategory())
-                            .title(entity.getTitle())
-                            .viewCount(views)
-                            .commentCount(0L)
-                            .likeCount(0L)
-                            .createdAt(entity.getCreatedAt())
-                            .isNotice(entity.getIsNotice())
-                            .build();
+                    return new PostSummaryDto(
+                            entity.getPostId(),
+                            entity.getCategory(),
+                            entity.getIsNotice(),
+                            entity.getTitle(),
+                            nickname,
+                            handle,
+                            entity.getCreatedAt(),
+                            0L, // commentCount (필요 시 추후 구현)
+                            entity.getViewCount()
+                    );
                 })
-                .toList(); // 이제 List<Object> 에러가 사라집니다.
+                .toList();
 
         return PostListResponseDTO.builder()
                 .list(list)
@@ -91,17 +110,20 @@ public class PostService {
     }
 
     @Transactional
-    public PostDetailResponseDTO getPostDetail(Long postId) {
+    public PostDetailResponseDTO getPostDetail(Long postId, Long currentUserId) { // currentUserId 추가
         PostEntity post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         post.increaseViewCount();
 
         String writerNickname = userRepository.findById(post.getUserId())
-                .map(u -> u.getNickname())
+                .map(UserEntity::getNickname) //
                 .orElse("알 수 없음");
 
         long views = (post.getViewCount() != null) ? post.getViewCount() : 0L;
+
+        // 본인 여부 확인 로직 적용
+        boolean isOwner = currentUserId != null && currentUserId.equals(post.getUserId());
 
         return PostDetailResponseDTO.builder()
                 .postId(post.getPostId())
@@ -113,7 +135,7 @@ public class PostService {
                 .viewCount(views)
                 .likeCount(0L)
                 .createdAt(post.getCreatedAt())
-                .isOwner(false)
+                .isOwner(isOwner) // 수정된 변수 적용
                 .build();
     }
 
