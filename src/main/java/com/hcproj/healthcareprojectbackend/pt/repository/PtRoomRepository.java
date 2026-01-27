@@ -6,7 +6,9 @@ import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomStatus;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
@@ -14,15 +16,14 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * PT 방({@link com.hcproj.healthcareprojectbackend.pt.entity.PtRoomEntity})
- * 에 대한 영속성 접근 인터페이스.
+ * PT 방({@link PtRoomEntity})에 대한 영속성 접근 인터페이스.
  *
  * <p><b>주요 기능</b></p>
  * <ul>
- *   <li>상태별 카운트(대시보드)</li>
- *   <li>커서 기반 목록 조회 + 다양한 필터</li>
- *   <li>동시성 제어를 위한 비관적 락 조회</li>
- *   <li>캘린더 UI를 위한 예약 시작 시각/일간 목록 조회(프로젝션)</li>
+ * <li>상태별 카운트(대시보드)</li>
+ * <li>커서 기반 목록 조회 + 다양한 필터(트레이너 검색 포함)</li>
+ * <li>동시성 제어를 위한 비관적 락 조회</li>
+ * <li>캘린더 UI를 위한 예약 시작 시각/일간 목록 조회(프로젝션)</li>
  * </ul>
  */
 public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
@@ -35,28 +36,37 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
      *
      * <p><b>커서 규칙</b></p>
      * <ul>
-     *   <li>cursorId가 null이면 최신부터 조회</li>
-     *   <li>cursorId가 있으면 {@code ptRoomId < cursorId} 조건으로 이전 데이터를 조회</li>
+     * <li>cursorId가 null이면 최신부터 조회</li>
+     * <li>cursorId가 있으면 {@code ptRoomId < cursorId} 조건으로 이전 데이터를 조회</li>
      * </ul>
      *
-     * <p><b>필터 규칙</b></p>
+     * <p><b>필터 및 검색 규칙</b></p>
      * <ul>
-     *   <li>statuses가 null이면 상태 필터 미적용, 아니면 IN 조건 적용</li>
-     *   <li>trainerId가 null이면 필터 미적용</li>
-     *   <li>roomIds가 null이면 필터 미적용</li>
-     *   <li>q가 null/empty면 검색 미적용, 아니면 title LIKE(대소문자 무시) 검색</li>
+     * <li>statuses가 null이면 상태 필터 미적용, 아니면 IN 조건 적용</li>
+     * <li>trainerId가 null이면 필터 미적용</li>
+     * <li>roomIds가 null이면 필터 미적용</li>
+     * <li>q가 null/empty면 검색 미적용, 아니면 <b>방 제목 / 트레이너 닉네임 / 트레이너 아이디</b>에 대해 OR 검색 (대소문자 무시)</li>
      * </ul>
      *
      * <p><b>정렬</b></p>
      * ptRoomId 내림차순(최신 우선)
      */
-    @Query("SELECT p FROM PtRoomEntity p " +
-            "WHERE (:cursorId IS NULL OR p.ptRoomId < :cursorId) " +
-            "AND (:statuses IS NULL OR p.status IN :statuses) " +
-            "AND (:trainerId IS NULL OR p.trainerId = :trainerId) " +
-            "AND (:roomIds IS NULL OR p.ptRoomId IN :roomIds) " +
-            "AND (:q IS NULL OR :q = '' OR lower(p.title) LIKE lower(concat('%', :q, '%'))) " +
-            "ORDER BY p.ptRoomId DESC")
+    @Query("""
+        SELECT DISTINCT p
+        FROM PtRoomEntity p
+        JOIN UserEntity u ON u.id = p.trainerId
+        WHERE (:cursorId IS NULL OR p.ptRoomId < :cursorId)
+          AND (:statuses IS NULL OR p.status IN :statuses)
+          AND (:trainerId IS NULL OR p.trainerId = :trainerId)
+          AND (:roomIds IS NULL OR p.ptRoomId IN :roomIds)
+          AND (
+              :q IS NULL OR :q = ''
+              OR lower(p.title) LIKE lower(concat('%', :q, '%'))
+              OR lower(u.nickname) LIKE lower(concat('%', :q, '%'))
+              OR lower(u.handle) LIKE lower(concat('%', :q, '%'))
+          )
+        ORDER BY p.ptRoomId DESC
+    """)
     List<PtRoomEntity> findPtRoomsByFilters(
             @Param("cursorId") Long cursorId,
             @Param("statuses") List<PtRoomStatus> statuses,
@@ -85,10 +95,10 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
      *
      * <p><b>포함 조건</b></p>
      * <ul>
-     *   <li>roomType이 RESERVED</li>
-     *   <li>scheduledStartAt이 [startInclusive, endExclusive) 범위</li>
-     *   <li>방 상태가 statuses에 포함</li>
-     *   <li>사용자가 트레이너이거나(방 소유자), 참가자 조건을 만족하는 경우만 포함</li>
+     * <li>roomType이 RESERVED</li>
+     * <li>scheduledStartAt이 [startInclusive, endExclusive) 범위</li>
+     * <li>방 상태가 statuses에 포함</li>
+     * <li>사용자가 트레이너이거나(방 소유자), 참가자 조건을 만족하는 경우만 포함</li>
      * </ul>
      *
      * @return 예약 시작 시각 목록(중복 제거)
@@ -105,7 +115,7 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
       AND r.scheduledStartAt < :endExclusive
       AND r.status IN :statuses
       AND (r.trainerId = :userId OR p.ptRoomParticipantId IS NOT NULL)
-""")
+    """)
     List<Instant> findReservedStartAtsInRangeForUserCalendar(
             @Param("userId") Long userId,
             @Param("participantStatus") PtParticipantStatus participantStatus,
@@ -141,7 +151,7 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
       AND r.status IN :statuses
       AND (r.trainerId = :userId OR p.ptRoomParticipantId IS NOT NULL)
     ORDER BY r.scheduledStartAt ASC
-""")
+    """)
     List<DailyVideoPtRow> findDailyVideoPtRowsForUser(
             @Param("userId") Long userId,
             @Param("participantStatus") PtParticipantStatus participantStatus,
