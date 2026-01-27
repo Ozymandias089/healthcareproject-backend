@@ -77,9 +77,12 @@ public class WorkoutAiRoutinesFacade {
         List<WorkoutDayEntity> existing = workoutDayRepository.findByUserIdAndLogDateIn(userId, targetDates);
         if (existing.isEmpty()) return;
 
-        List<Long> dayIds = existing.stream().map(WorkoutDayEntity::getWorkoutDayId).toList();
+        List<Long> dayIds = existing.stream()
+                .map(WorkoutDayEntity::getWorkoutDayId)
+                .toList();
+
+        // 기존 항목만 삭제 (Day는 유지하고 persist에서 title 갱신 + item 재삽입)
         workoutItemRepository.deleteByWorkoutDayIdIn(dayIds);
-        workoutDayRepository.deleteAll(existing);
     }
 
     private void validateAiOutput(List<LocalDate> targetDates, WorkoutAiRoutineResult ai, Set<Long> allowedIds) {
@@ -110,24 +113,56 @@ public class WorkoutAiRoutinesFacade {
     }
 
     private Persisted persist(Long userId, WorkoutAiRoutineResult ai) {
-        // day insert
-        List<WorkoutDayEntity> dayEntities = ai.days().stream()
+        // 0) AI days를 날짜 기준으로 정렬(안 해도 되지만 안정성↑)
+        List<WorkoutAiRoutineResult.Day> aiDays = ai.days().stream()
                 .sorted(Comparator.comparing(WorkoutAiRoutineResult.Day::logDate))
-                .map(d -> WorkoutDayEntity.builder()
+                .toList();
+
+        List<LocalDate> dates = aiDays.stream()
+                .map(WorkoutAiRoutineResult.Day::logDate)
+                .toList();
+
+        // 1) 기존 day 조회
+        Map<LocalDate, WorkoutDayEntity> existing =
+                workoutDayRepository.findByUserIdAndLogDateIn(userId, dates).stream()
+                        .collect(Collectors.toMap(WorkoutDayEntity::getLogDate, d -> d));
+
+        // 2) day 업서트(있으면 title 갱신, 없으면 생성)
+        List<WorkoutDayEntity> daysToSave = new ArrayList<>();
+        for (var d : aiDays) {
+            WorkoutDayEntity day = existing.get(d.logDate());
+            if (day == null) {
+                day = WorkoutDayEntity.builder()
                         .userId(userId)
                         .logDate(d.logDate())
                         .title(d.title())
-                        .build())
-                .toList();
+                        .build();
+            } else {
+                day.replaceTitle(d.title()); // 엔티티에 메서드 필요
+            }
+            daysToSave.add(day);
+        }
 
-        List<WorkoutDayEntity> savedDays = workoutDayRepository.saveAll(dayEntities);
+        List<WorkoutDayEntity> savedDays = workoutDayRepository.saveAll(daysToSave);
+
+        // 3) 날짜 -> dayId 매핑
         Map<LocalDate, Long> dateToDayId = savedDays.stream()
                 .collect(Collectors.toMap(WorkoutDayEntity::getLogDate, WorkoutDayEntity::getWorkoutDayId));
 
-        // item insert
+        // 4) 해당 day들의 item 전부 삭제(덮어쓰기)
+        List<Long> dayIds = savedDays.stream()
+                .map(WorkoutDayEntity::getWorkoutDayId)
+                .toList();
+        workoutItemRepository.deleteByWorkoutDayIdIn(dayIds);
+
+        // 5) item 재삽입
         List<WorkoutItemEntity> itemEntities = new ArrayList<>();
-        for (var day : ai.days()) {
+        for (var day : aiDays) {
             Long dayId = dateToDayId.get(day.logDate());
+            if (dayId == null) {
+                throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+            }
+
             for (var it : day.items()) {
                 itemEntities.add(WorkoutItemEntity.builder()
                         .workoutDayId(dayId)
@@ -140,7 +175,7 @@ public class WorkoutAiRoutinesFacade {
                         .distanceKm(it.distanceKm())
                         .rpe(it.rpe())
                         .amount(it.amount())
-                        .isChecked(false) // 정책 A
+                        .isChecked(false) // 정책: 새로 생성된 루틴은 미체크
                         .build());
             }
         }

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.Objects;
 
 /**
  * 사용자의 특정 날짜에 대한 운동 기록(하루 운동)의 루트 엔티티.
@@ -49,4 +50,10 @@ public class WorkoutDayEntity extends BaseTimeEntity {
     @Lob
     @Column(name = "title", nullable = false)
     private String title;
+
+    public void replaceTitle(String title) {
+        if (title == null || title.isBlank()) return; // 또는 예외
+        if (Objects.equals(this.title, title)) return;
+        this.title = title;
+    }
 }
