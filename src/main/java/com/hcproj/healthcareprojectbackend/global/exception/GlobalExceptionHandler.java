@@ -73,4 +73,5 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ec.status())
                 .body(ApiResponse.fail(ec.code(), ec.message()));
     }
+
 }

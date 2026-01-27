@@ -43,7 +43,7 @@ public class AdminTrainerService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         TrainerInfoEntity trainerInfo = trainerInfoRepository.findById(user.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRAINER_APPLICATION_NOT_FOUND));
 
         trainerInfo.approve();
         user.makeTrainer();
@@ -107,16 +107,21 @@ public class AdminTrainerService {
                 .build();
     }
 
-    // [추가됨] 관리자: 트레이너 신청 거절
+    // 관리자: 트레이너 신청 거절
     @Transactional
     public TrainerRejectResponseDTO rejectTrainer(String handle, String reason) {
+        //  거절 사유 검증 (TRAINER_REJECT_REASON_REQUIRED 사용)
+        if (reason == null || reason.isBlank()) {
+            throw new BusinessException(ErrorCode.TRAINER_REJECT_REASON_REQUIRED);
+        }
+
         // 1. 유저 조회
         UserEntity user = userRepository.findByHandle(handle)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 2. 신청 내역 조회
         TrainerInfoEntity trainerInfo = trainerInfoRepository.findById(user.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRAINER_REJECT_REASON_REQUIRED));
 
         // 3. 거절 처리 (Entity 메서드 호출)
         trainerInfo.reject(reason);

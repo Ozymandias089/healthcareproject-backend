@@ -115,7 +115,7 @@ public class AdminReportService {
     @Transactional
     public void updateReportStatus(Long reportId, ReportStatusUpdateRequestDTO request) {
         ReportEntity report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REPORT_NOT_FOUND));
 
         ReportStatus newStatus;
         try {
