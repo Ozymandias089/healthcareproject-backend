@@ -1,5 +1,6 @@
 package com.hcproj.healthcareprojectbackend.community.service;
 
+import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.community.dto.request.PostCreateRequestDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.request.PostUpdateRequestDTO;
@@ -91,17 +92,20 @@ public class PostService {
     }
 
     @Transactional
-    public PostDetailResponseDTO getPostDetail(Long postId) {
+    public PostDetailResponseDTO getPostDetail(Long postId, Long currentUserId) { // currentUserId 추가
         PostEntity post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         post.increaseViewCount();
 
         String writerNickname = userRepository.findById(post.getUserId())
-                .map(u -> u.getNickname())
+                .map(UserEntity::getNickname) //
                 .orElse("알 수 없음");
 
         long views = (post.getViewCount() != null) ? post.getViewCount() : 0L;
+
+        // 본인 여부 확인 로직 적용
+        boolean isOwner = currentUserId != null && currentUserId.equals(post.getUserId());
 
         return PostDetailResponseDTO.builder()
                 .postId(post.getPostId())
@@ -113,7 +117,7 @@ public class PostService {
                 .viewCount(views)
                 .likeCount(0L)
                 .createdAt(post.getCreatedAt())
-                .isOwner(false)
+                .isOwner(isOwner) // 수정된 변수 적용
                 .build();
     }
 

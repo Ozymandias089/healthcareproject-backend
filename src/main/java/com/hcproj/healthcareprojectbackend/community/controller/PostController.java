@@ -32,9 +32,12 @@ public class PostController {
 
     /** 2. 게시글 상세 조회 */
     @GetMapping(path = "/{postId}", produces = "application/json")
-    public ApiResponse<PostDetailResponseDTO> getPostDetail(@PathVariable("postId") Long postId) {
-        // 서비스 리턴 타입인 PostDetailResponseDTO로 제네릭 맞춤
-        return ApiResponse.ok(postService.getPostDetail(postId));
+    public ApiResponse<PostDetailResponseDTO> getPostDetail(
+            @CurrentUserId Long userId, // [수정] 현재 로그인한 유저 ID를 받습니다.
+            @PathVariable("postId") Long postId
+    ) {
+        // [수정] 서비스 호출 시 postId와 userId 두 개를 모두 전달합니다.
+        return ApiResponse.ok(postService.getPostDetail(postId, userId));
     }
 
     /** 3. 게시글 작성 */
