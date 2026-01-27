@@ -6,8 +6,6 @@ import com.hcproj.healthcareprojectbackend.community.dto.request.PostCreateReque
 import com.hcproj.healthcareprojectbackend.community.dto.request.PostUpdateRequestDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostListResponseDTO;
-import java.util.Map;               // Map 클래스를 사용하기 위해 필요
-import java.util.stream.Collectors;
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostSummaryDto;
 import com.hcproj.healthcareprojectbackend.community.entity.PostEntity;
 import com.hcproj.healthcareprojectbackend.community.entity.PostStatus;
@@ -21,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 커뮤니티 게시글 관련 비즈니스 로직 서비스.
@@ -38,14 +38,13 @@ public class PostService {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        // Entity 구조에 맞춰 생성
         PostEntity post = PostEntity.builder()
                 .userId(userId)
                 .category(request.category())
                 .title(request.title())
                 .content(request.content())
                 .status(PostStatus.POSTED)
-                .viewCount(0L) // Long 타입 대응
+                .viewCount(0L)
                 .isNotice(false)
                 .build();
 
@@ -54,10 +53,11 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public PostListResponseDTO getPostList(Long cursorId, String category, String searchBy, String q, int size) {
-        Pageable pageable = PageRequest.of(0, size);
+        // [수정] hasNext 여부를 판단하기 위해 요청된 size보다 1개를 더 조회합니다.
+        Pageable pageable = PageRequest.of(0, size + 1);
         List<PostEntity> entities;
 
-        // 1. [기존 검색 로직] 검색어와 필터에 따라 엔티티 리스트 조회
+        // 1. 검색 로직 (기존 유지)
         if (q == null || q.isBlank()) {
             entities = postRepository.findPostList(cursorId, category, pageable);
         } else {
@@ -70,22 +70,28 @@ public class PostService {
             }
         }
 
-        // 2. [추가된 로직] 조회된 게시글들의 작성자 정보를 한꺼번에 조회 (N+1 방지)
+        // 2. [수정] hasNext 계산 (size보다 더 많이 가져왔다면 다음 페이지가 있는 것)
+        boolean hasNext = entities.size() > size;
+        if (hasNext) {
+            entities.remove(size); // 확인용으로 가져온 마지막 데이터는 리스트에서 제거
+        }
+
+        // 3. 작성자 정보 일괄 조회 (N+1 방지)
         List<Long> userIds = entities.stream()
                 .map(PostEntity::getUserId)
                 .distinct()
                 .toList();
 
-        Map<Long, com.hcproj.healthcareprojectbackend.auth.entity.UserEntity> userMap = userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(com.hcproj.healthcareprojectbackend.auth.entity.UserEntity::getId, u -> u));
+        Map<Long, UserEntity> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(UserEntity::getId, u -> u));
 
-        // 3. 다음 페이지를 위한 커서 ID 계산
+        // 4. 다음 커서 계산
         Long nextCursorId = entities.isEmpty() ? null : entities.get(entities.size() - 1).getPostId();
 
-        // 4. [프론트엔드 요구사항] PostSummaryDto 리스트로 변환 (닉네임, 핸들 포함)
-        List<PostSummaryDto> list = entities.stream()
+        // 5. [수정] PostSummaryDto 매핑 (프론트엔드 요구 필드 포함)
+        List<PostSummaryDto> dtos = entities.stream()
                 .map(entity -> {
-                    var author = userMap.get(entity.getUserId());
+                    UserEntity author = userMap.get(entity.getUserId());
                     String nickname = (author != null) ? author.getNickname() : "알 수 없음";
                     String handle = (author != null) ? author.getHandle() : "";
 
@@ -97,46 +103,58 @@ public class PostService {
                             nickname,
                             handle,
                             entity.getCreatedAt(),
-                            0L,                   // commentCount
+                            0L,                   // commentCount (추후 구현)
                             entity.getViewCount(),
-                            0L                    // [추가] likeCount (일단 0L로 전달, 나중에 로직 구현)
+                            0L                    // [필수] likeCount (프론트 에러 방지용)
                     );
                 })
                 .toList();
 
+        // 6. [핵심 수정] 프론트엔드 구조(items, pageInfo)에 맞춰 반환
         return PostListResponseDTO.builder()
-                .list(list)
-                .nextCursorId(nextCursorId)
+                .notices(List.of())        // 공지사항 (일단 빈 리스트)
+                .items(dtos)               // [변경] list -> items
+                .pageInfo(PostListResponseDTO.PageInfo.builder()
+                        .nextCursorId(nextCursorId)
+                        .hasNext(hasNext)  // [추가] 다음 페이지 존재 여부
+                        .size(size)        // [추가] 페이지 사이즈
+                        .build())
                 .build();
     }
 
     @Transactional
-    public PostDetailResponseDTO getPostDetail(Long postId, Long currentUserId) { // currentUserId 추가
+    public PostDetailResponseDTO getPostDetail(Long postId, Long currentUserId) {
         PostEntity post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         post.increaseViewCount();
 
-        String writerNickname = userRepository.findById(post.getUserId())
-                .map(UserEntity::getNickname) //
-                .orElse("알 수 없음");
+        // 작성자 정보 조회 (한 번만 조회하도록 수정)
+        UserEntity writer = userRepository.findById(post.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         long views = (post.getViewCount() != null) ? post.getViewCount() : 0L;
-
-        // 본인 여부 확인 로직 적용
         boolean isOwner = currentUserId != null && currentUserId.equals(post.getUserId());
 
+        // [핵심 수정] 프론트엔드 상세 조회 구조(author 객체, comments 리스트)에 맞춤
         return PostDetailResponseDTO.builder()
                 .postId(post.getPostId())
-                .userId(post.getUserId())
-                .writerNickname(writerNickname)
+                .author(PostDetailResponseDTO.AuthorDTO.builder() // [변경] 닉네임 문자열 -> AuthorDTO 객체
+                        .userId(writer.getId())
+                        .nickname(writer.getNickname())
+                        .handle(writer.getHandle())
+                        .profileImageUrl(null) // 프로필 이미지 (없으면 null)
+                        .build())
                 .category(post.getCategory())
                 .title(post.getTitle())
                 .content(post.getContent())
                 .viewCount(views)
-                .likeCount(0L)
+                .commentCount(0L)          // [추가] 댓글 수
+                .likeCount(0L)             // [추가] 좋아요 수
                 .createdAt(post.getCreatedAt())
-                .isOwner(isOwner) // 수정된 변수 적용
+                .updatedAt(null)           // [추가] 수정일
+                .isOwner(isOwner)
+                .comments(List.of())       // [필수] 빈 댓글 리스트 (프론트 맵핑 에러 방지)
                 .build();
     }
 
@@ -146,12 +164,9 @@ public class PostService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         if (!post.getUserId().equals(userId)) {
-            // ErrorCode.NOT_POST_AUTHOR (COMMUNITY-002) 사용
             throw new BusinessException(ErrorCode.NOT_POST_AUTHOR);
         }
 
-        // [핵심] Entity의 update(String, String, String, Boolean) 4개 인자에 맞춰 호출
-        // 수정 시 공지 여부(Boolean)는 기존 값을 유지하도록 post.getIsNotice() 전달
         post.update(
                 request.title(),
                 request.content(),
