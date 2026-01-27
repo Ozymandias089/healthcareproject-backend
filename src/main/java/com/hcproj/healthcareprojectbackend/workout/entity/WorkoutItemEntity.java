@@ -5,6 +5,32 @@ import lombok.*;
 
 import java.math.BigDecimal;
 
+/**
+ * 하루 운동({@link WorkoutDayEntity})을 구성하는 개별 운동 항목 엔티티.
+ *
+ * <p><b>모델링 특징</b></p>
+ * <ul>
+ *   <li>특정 운동({@code exerciseId})을 참조한다. (마스터: {@link ExerciseEntity})</li>
+ *   <li>정렬 순서({@code sortOrder})를 통해 하루 운동 내 표시 순서를 유지한다.</li>
+ *   <li>세트/횟수 기반 운동과 시간/거리 기반 운동을 모두 수용하도록 다양한 입력 필드를 가진다.</li>
+ * </ul>
+ *
+ * <p><b>조회 최적화</b></p>
+ * <ul>
+ *   <li>{@code idx_workout_items_day_sort}: (workout_day_id, sort_order) 인덱스</li>
+ *   <li>{@code idx_workout_items_exercise}: exercise_id 인덱스</li>
+ * </ul>
+ *
+ * <p><b>체크 정책</b></p>
+ * <ul>
+ *   <li>{@code isChecked}는 사용자의 수행 완료 여부를 나타낸다.</li>
+ *   <li>{@link #updateChecked(Boolean)}는 동일 값 요청 시 무시하는 멱등(idempotent) 동작을 가진다.</li>
+ * </ul>
+ *
+ * <p>
+ * amount는 자유 형식 텍스트(예: "벤치 60kg", "덤벨 12kg") 등을 담기 위한 확장 필드로 사용 가능하다.
+ * </p>
+ */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -55,7 +81,15 @@ public class WorkoutItemEntity {
     @Column(name = "is_checked", nullable = false)
     private Boolean isChecked;
 
-    // 체크 상태 변경
+    /**
+     * 수행 체크 상태를 변경한다.
+     *
+     * <p>
+     * 동일한 상태로 변경 요청 시 아무 동작도 하지 않는다(멱등성 보장).
+     * </p>
+     *
+     * @param checked 변경할 체크 상태
+     */
     public void updateChecked(Boolean checked) {
         if (this.isChecked.equals(checked)) {
             return;
