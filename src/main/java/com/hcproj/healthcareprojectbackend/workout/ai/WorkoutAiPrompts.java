@@ -67,6 +67,10 @@ Rules:
 - Generate routines ONLY for the given dates.
 - displayOrder starts at 0 and is contiguous per day.
 - totalMinutes should be a reasonable estimate (30~90).
+Language rules:
+- title must be Korean (Hangul). No English words.
+- considerations must be Korean.
+- amount (if present) should be Korean.
 """;
 
     /**

@@ -72,36 +72,70 @@ public class DietAiWeekPlanFacade {
         List<DietDayEntity> existingDays = dietDayRepository.findAllByUserIdAndLogDateBetween(userId, start, end);
         if (existingDays.isEmpty()) return;
 
-        List<Long> dayIds = existingDays.stream().map(DietDayEntity::getDietDayId).toList();
+        List<Long> dayIds = existingDays.stream()
+                .map(DietDayEntity::getDietDayId)
+                .toList();
 
         List<DietMealEntity> meals = dietMealRepository.findByDietDayIdIn(dayIds);
-        if (!meals.isEmpty()) {
-            List<Long> mealIds = meals.stream().map(DietMealEntity::getDietMealId).toList();
+        if (meals.isEmpty()) return;
+
+        List<Long> mealIds = meals.stream()
+                .map(DietMealEntity::getDietMealId)
+                .toList();
+
+        dietMealItemRepository.deleteByDietMealIdIn(mealIds);
+        dietMealRepository.deleteByDietDayIdIn(dayIds);
+    }
+
+    private Persisted persistAiResult(Long userId, DietAiWeekPlanResult ai) {
+        // 0) ai days 정렬
+        List<DietAiWeekPlanResult.Day> aiDays = ai.days().stream()
+                .sorted(Comparator.comparing(DietAiWeekPlanResult.Day::logDate))
+                .toList();
+
+        List<LocalDate> dates = aiDays.stream()
+                .map(DietAiWeekPlanResult.Day::logDate)
+                .toList();
+
+        // 1) 기존 day 조회 (upsert 준비)
+        Map<LocalDate, DietDayEntity> existing =
+                dietDayRepository.findAllByUserIdAndLogDateBetween(userId, dates.get(0), dates.get(dates.size() - 1)).stream()
+                        .filter(d -> dates.contains(d.getLogDate()))
+                        .collect(Collectors.toMap(DietDayEntity::getLogDate, d -> d));
+
+        // 2) day upsert (있으면 재사용, 없으면 생성)
+        List<DietDayEntity> daysToSave = new ArrayList<>();
+        for (var d : aiDays) {
+            DietDayEntity day = existing.get(d.logDate());
+            if (day == null) {
+                day = DietDayEntity.builder()
+                        .userId(userId)
+                        .logDate(d.logDate())
+                        .build();
+            }
+            daysToSave.add(day);
+        }
+
+        List<DietDayEntity> savedDays = dietDayRepository.saveAll(daysToSave);
+
+        Map<LocalDate, Long> dateToDayId = savedDays.stream()
+                .collect(Collectors.toMap(DietDayEntity::getLogDate, DietDayEntity::getDietDayId));
+
+        // 3) 해당 day들의 기존 meal/item 전량 삭제 (덮어쓰기)
+        List<Long> dayIds = savedDays.stream().map(DietDayEntity::getDietDayId).toList();
+        List<DietMealEntity> existingMeals = dietMealRepository.findByDietDayIdIn(dayIds);
+        if (!existingMeals.isEmpty()) {
+            List<Long> mealIds = existingMeals.stream().map(DietMealEntity::getDietMealId).toList();
             dietMealItemRepository.deleteByDietMealIdIn(mealIds);
             dietMealRepository.deleteByDietDayIdIn(dayIds);
         }
 
-        dietDayRepository.deleteAll(existingDays);
-    }
-
-    private Persisted persistAiResult(Long userId, DietAiWeekPlanResult ai) {
-        // day insert
-        List<DietDayEntity> dayEntities = ai.days().stream()
-                .sorted(Comparator.comparing(DietAiWeekPlanResult.Day::logDate))
-                .map(d -> DietDayEntity.builder()
-                        .userId(userId)
-                        .logDate(d.logDate())
-                        .build())
-                .toList();
-
-        List<DietDayEntity> savedDays = dietDayRepository.saveAll(dayEntities);
-        Map<LocalDate, Long> dateToDayId = savedDays.stream()
-                .collect(Collectors.toMap(DietDayEntity::getLogDate, DietDayEntity::getDietDayId));
-
-        // meal insert
+        // 4) meal insert
         List<DietMealEntity> mealEntities = new ArrayList<>();
-        for (var day : ai.days()) {
+        for (var day : aiDays) {
             Long dayId = dateToDayId.get(day.logDate());
+            if (dayId == null) throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+
             for (var meal : day.meals()) {
                 mealEntities.add(DietMealEntity.builder()
                         .dietDayId(dayId)
@@ -112,25 +146,28 @@ public class DietAiWeekPlanFacade {
         }
         List<DietMealEntity> savedMeals = dietMealRepository.saveAll(mealEntities);
 
-        // (logDate, displayOrder) -> dietMealId 매핑
-        // mealEntities와 savedMeals는 같은 순서로 반환되는 게 일반적이지만, DB/구현체에 의존하지 않게 안전하게 매핑하려면 재조회가 더 확실.
-        // 여기선 성능 위해 "같은 순서" 전제로 간단히 처리:
-        if (savedMeals.size() != mealEntities.size()) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
+        // 5) (dietDayId, sortOrder) -> dietMealId 매핑을 "재조회 없이" 안전하게 만들기
+        // 저장된 meal 엔티티들로 맵핑: (dietDayId, sortOrder)는 유니크니까 key로 사용 가능
+        Map<MealKey, Long> mealKeyToId = savedMeals.stream()
+                .collect(Collectors.toMap(
+                        m -> new MealKey(m.getDietDayId(), m.getSortOrder()),
+                        DietMealEntity::getDietMealId
+                ));
 
-        // item insert
+        // 6) item insert
         List<DietMealItemEntity> itemEntities = new ArrayList<>();
-        int mealIdx = 0;
-        for (var day : ai.days()) {
+        for (var day : aiDays) {
+            Long dayId = dateToDayId.get(day.logDate());
             for (var meal : day.meals()) {
-                Long savedMealId = savedMeals.get(mealIdx++).getDietMealId();
+                Long mealId = mealKeyToId.get(new MealKey(dayId, meal.displayOrder()));
+                if (mealId == null) throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+
                 for (var item : meal.items()) {
                     itemEntities.add(DietMealItemEntity.builder()
-                            .dietMealId(savedMealId)
+                            .dietMealId(mealId)
                             .foodId(item.foodId())
                             .count(item.count())
-                            .isChecked(false) // 정책 A
+                            .isChecked(false)
                             .build());
                 }
             }
@@ -139,6 +176,8 @@ public class DietAiWeekPlanFacade {
 
         return new Persisted(savedDays, savedMeals, savedItems);
     }
+
+    private record MealKey(Long dietDayId, Integer sortOrder) {}
 
     private AiDietWeekPlanResponseDTO buildResponse(LocalDate startDate, LocalDate endDate, String consideration, Persisted persisted) {
 

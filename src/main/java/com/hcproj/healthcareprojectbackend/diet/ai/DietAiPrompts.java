@@ -66,6 +66,10 @@ Rules:
 - Use 3~5 meals per day
 - displayOrder starts at 0 and is contiguous
 - Count must be a positive integer
+Language rules:
+- title must be Korean (Hangul). No English words.
+- considerations must be Korean.
+- amount (if present) should be Korean.
 """;
 
     /**
