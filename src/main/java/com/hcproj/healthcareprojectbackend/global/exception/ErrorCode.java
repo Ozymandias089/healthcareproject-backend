@@ -119,6 +119,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-001", "사용자를 찾을 수 없습니다"),
     INVALID_INJURY_LEVEL(HttpStatus.BAD_REQUEST, "USER-002", "부상 레벨이 존재하지 않습니다"),
     INVALID_ALLERGY_TYPE(HttpStatus.BAD_REQUEST, "USER-003", "알러지 타입이 존재하지 않습니다"),
+    USER_SUSPENDED(HttpStatus.UNAUTHORIZED, "USER-004", "정지된 사용자입니다."),
 
     // -------------------------
     // Community (Post/Comment/Report)
