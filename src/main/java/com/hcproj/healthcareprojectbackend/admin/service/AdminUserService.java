@@ -66,12 +66,28 @@ public class AdminUserService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        // [추가 1] 관리자(ADMIN)는 차단할 수 없음!
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new BusinessException(ErrorCode.CANNOT_BAN_ADMIN);
+        }
+
         // (2) 변경할 상태 파싱
         UserStatus newStatus;
         try {
             newStatus = UserStatus.valueOf(request.status().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        // [추가 2] 상태 변경 검증 (이미 차단됨 / 차단 안됨)
+        if (newStatus == UserStatus.SUSPENDED) {
+            if (user.getStatus() == UserStatus.SUSPENDED) {
+                throw new BusinessException(ErrorCode.USER_ALREADY_BANNED); // "이미 차단된 회원입니다"
+            }
+        } else if (newStatus == UserStatus.ACTIVE) {
+            if (user.getStatus() != UserStatus.SUSPENDED) {
+                throw new BusinessException(ErrorCode.USER_NOT_BANNED); // "차단되지 않은 회원입니다"
+            }
         }
 
         // (3) 상태 변경
