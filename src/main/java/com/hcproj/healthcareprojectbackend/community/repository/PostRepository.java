@@ -39,90 +39,31 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
     //  커서 기반 페이징 (User Side) - 검색 조건별 메서드 분리
     // ========================================================================
 
-    /**
-     * 1. 검색어 없는 기본 목록 조회.
-     *
-     * @param cursorId 커서 기준 postId (null이면 최신순)
-     * @param category 카테고리 (null이면 전체)
-     * @param pageable 페이징 정보 (limit)
-     * @return 게시글 목록
-     */
+    // 1. 기본 목록 조회
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND (:category IS NULL OR p.category = :category) " +
+            "WHERE (:category = 'ALL' OR p.category = :category) " +
+            "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
             "AND p.status = 'POSTED' " +
             "ORDER BY p.postId DESC")
-    List<PostEntity> findPostList(
-            @Param("cursorId") Long cursorId,
-            @Param("category") String category,
-            Pageable pageable
-    );
+    List<PostEntity> findPostList(@Param("cursorId") Long cursorId, @Param("category") String category, Pageable pageable);
 
-    /**
-     * 2. 제목(Title) 검색.
-     */
+    // 2. [제목 검색] (CONCAT 적용 완료)
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND (:category IS NULL OR p.category = :category) " +
+            "WHERE (:category = 'ALL' OR p.category = :category) " +
+            "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
+            "AND p.title LIKE CONCAT('%', :q, '%') " +  // 제목에 포함된 것 검색
             "AND p.status = 'POSTED' " +
-            "AND p.title LIKE %:q% " +
             "ORDER BY p.postId DESC")
-    List<PostEntity> searchByTitle(
-            @Param("cursorId") Long cursorId,
-            @Param("category") String category,
-            @Param("q") String q,
-            Pageable pageable
-    );
+    List<PostEntity> searchByTitle(@Param("cursorId") Long cursorId, @Param("category") String category, @Param("q") String q, Pageable pageable);
 
-    /**
-     * 3. 내용(Content) 검색.
-     */
+    // 3. [닉네임 검색] (작성자 닉네임 서브쿼리 + CONCAT 적용 완료)
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND (:category IS NULL OR p.category = :category) " +
+            "WHERE (:category = 'ALL' OR p.category = :category) " +
+            "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
+            "AND p.userId IN (SELECT u.id FROM UserEntity u WHERE u.nickname LIKE CONCAT('%', :q, '%')) " + // 닉네임 검색
             "AND p.status = 'POSTED' " +
-            "AND p.content LIKE %:q% " +
             "ORDER BY p.postId DESC")
-    List<PostEntity> searchByContent(
-            @Param("cursorId") Long cursorId,
-            @Param("category") String category,
-            @Param("q") String q,
-            Pageable pageable
-    );
-
-    /**
-     * 4. 작성자(Author) 검색.
-     * <p>UserEntity와 조인하여 닉네임을 검색한다.</p>
-     */
-    @Query("SELECT p FROM PostEntity p " +
-            "LEFT JOIN UserEntity u ON p.userId = u.id " +
-            "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND (:category IS NULL OR p.category = :category) " +
-            "AND p.status = 'POSTED' " +
-            "AND u.nickname LIKE %:q% " +
-            "ORDER BY p.postId DESC")
-    List<PostEntity> searchByAuthor(
-            @Param("cursorId") Long cursorId,
-            @Param("category") String category,
-            @Param("q") String q,
-            Pageable pageable
-    );
-
-    /**
-     * 5. 제목 + 내용(Title + Content) 검색.
-     */
-    @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND (:category IS NULL OR p.category = :category) " +
-            "AND p.status = 'POSTED' " +
-            "AND (p.title LIKE %:q% OR p.content LIKE %:q%) " +
-            "ORDER BY p.postId DESC")
-    List<PostEntity> searchByTitleAndContent(
-            @Param("cursorId") Long cursorId,
-            @Param("category") String category,
-            @Param("q") String q,
-            Pageable pageable
-    );
+    List<PostEntity> searchByAuthor(@Param("cursorId") Long cursorId, @Param("category") String category, @Param("q") String q, Pageable pageable);
 
     // ========================================================================
     //  관리자 / 통계 (Admin Side)

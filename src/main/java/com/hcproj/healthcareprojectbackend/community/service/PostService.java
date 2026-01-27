@@ -57,16 +57,22 @@ public class PostService {
         Pageable pageable = PageRequest.of(0, size + 1);
         List<PostEntity> entities;
 
-        // 1. 검색 로직 (기존 유지)
         if (q == null || q.isBlank()) {
+            // 검색어 없으면 전체 목록
             entities = postRepository.findPostList(cursorId, category, pageable);
         } else {
-            String type = (searchBy == null) ? "TITLE_CONTENT" : searchBy.toUpperCase();
+            // 검색어 있으면 'searchBy' 확인
+            String type = (searchBy == null) ? "TITLE" : searchBy.toUpperCase(); // 기본값 TITLE
+
             switch (type) {
-                case "TITLE" -> entities = postRepository.searchByTitle(cursorId, category, q, pageable);
-                case "CONTENT" -> entities = postRepository.searchByContent(cursorId, category, q, pageable);
-                case "AUTHOR" -> entities = postRepository.searchByAuthor(cursorId, category, q, pageable);
-                default -> entities = postRepository.searchByTitleAndContent(cursorId, category, q, pageable);
+                case "NICKNAME", "AUTHOR" -> // 닉네임(작성자) 검색 선택 시
+                        entities = postRepository.searchByAuthor(cursorId, category, q, pageable);
+
+                case "TITLE" -> // 제목 검색 선택 시
+                        entities = postRepository.searchByTitle(cursorId, category, q, pageable);
+
+                default -> // 그 외(혹시 모를 경우)는 제목 검색으로 통일
+                        entities = postRepository.searchByTitle(cursorId, category, q, pageable);
             }
         }
 
