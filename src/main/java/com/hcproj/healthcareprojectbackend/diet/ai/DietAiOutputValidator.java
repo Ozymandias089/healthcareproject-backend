@@ -43,48 +43,63 @@ public class DietAiOutputValidator {
      * @throws BusinessException 검증 실패 시
      */
     public void validate(LocalDate startDate, DietAiWeekPlanResult result, Set<Long> allowedFoodIds) {
-        if (result == null) throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
+        try {
+            if (result == null) fail("result is null");
 
-        LocalDate expectedEnd = startDate.plusDays(6);
-        if (!startDate.equals(result.startDate()) || !expectedEnd.equals(result.endDate())) {
-            throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
-        }
+            LocalDate expectedEnd = startDate.plusDays(6);
+            if (!startDate.equals(result.startDate()) || !expectedEnd.equals(result.endDate())) {
+                fail("start/end mismatch. expectedStart=" + startDate + ", gotStart=" + result.startDate()
+                        + ", expectedEnd=" + expectedEnd + ", gotEnd=" + result.endDate());
+            }
 
-        if (result.days() == null || result.days().size() != 7) {
-            throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
-        }
+            if (result.days() == null || result.days().size() != 7) {
+                fail("days size invalid. size=" + (result.days() == null ? "null" : result.days().size()));
+            }
 
-        Set<LocalDate> daySet = new HashSet<>();
-        for (var day : result.days()) {
-            if (day.logDate() == null) throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
-            daySet.add(day.logDate());
+            Set<LocalDate> daySet = new HashSet<>();
+            for (var day : result.days()) {
+                if (day.logDate() == null) fail("day.logDate is null");
+                daySet.add(day.logDate());
 
-            if (day.meals() == null || day.meals().isEmpty()) throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
+                if (day.meals() == null || day.meals().isEmpty()) fail("meals empty. date=" + day.logDate());
 
-            int expectedOrder = 0;
-            for (var meal : day.meals()) {
-                if (meal.displayOrder() == null || meal.displayOrder() != expectedOrder) {
-                    throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
-                }
-                expectedOrder++;
-
-                if (meal.title() == null || meal.title().isBlank()) throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
-                if (meal.items() == null || meal.items().isEmpty()) throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
-
-                for (var item : meal.items()) {
-                    if (item.foodId() == null || !allowedFoodIds.contains(item.foodId())) {
-                        throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
+                int expectedOrder = 0;
+                for (var meal : day.meals()) {
+                    if (meal.displayOrder() == null || meal.displayOrder() != expectedOrder) {
+                        fail("meal displayOrder invalid. date=" + day.logDate()
+                                + ", expected=" + expectedOrder + ", got=" + meal.displayOrder());
                     }
-                    if (item.count() == null || item.count() <= 0) {
-                        throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
+                    expectedOrder++;
+
+                    if (meal.title() == null || meal.title().isBlank()) fail("meal title blank. date=" + day.logDate());
+                    if (meal.items() == null || meal.items().isEmpty()) fail("meal items empty. date=" + day.logDate());
+
+                    for (var item : meal.items()) {
+                        if (item.foodId() == null || !allowedFoodIds.contains(item.foodId())) {
+                            fail("foodId not allowed. date=" + day.logDate() + ", foodId=" + item.foodId());
+                        }
+                        if (item.count() == null || item.count() <= 0) {
+                            fail("count invalid. date=" + day.logDate()
+                                    + ", foodId=" + item.foodId() + ", count=" + item.count());
+                        }
                     }
                 }
             }
-        }
 
-        // 날짜가 startDate..startDate+6을 정확히 포함하는지
-        for (int i = 0; i < 7; i++) {
-            if (!daySet.contains(startDate.plusDays(i))) throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
+            for (int i = 0; i < 7; i++) {
+                LocalDate d = startDate.plusDays(i);
+                if (!daySet.contains(d)) fail("missing date in days: " + d);
+            }
+        } catch (IllegalStateException e) {
+            // 여기서 로깅
+            org.slf4j.LoggerFactory.getLogger(DietAiOutputValidator.class)
+                    .warn("AI output invalid: {}", e.getMessage());
+            throw new BusinessException(ErrorCode.AI_INVALID_OUTPUT);
         }
     }
+
+    private static void fail(String msg) {
+        throw new IllegalStateException(msg);
+    }
+
 }
