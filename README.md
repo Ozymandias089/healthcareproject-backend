@@ -183,6 +183,13 @@ public class MeController {
 - **Backend**: https://github.com/Ozymandias089/healthcareproject-backend
 - **Frontend**: https://github.com/juyoungck/healthcareproject-frontend
 
+## Project Documentation
+
+[//]: # (WIP)
+- **Notion**: https://notion.so/XXXX 
+  - API design & conventions
+  - Sprint / task tracking
+
 ## Contributors
 
 | Name    | GitHub                                             | Role         | Responsibility                                                                                                             |
