@@ -4,6 +4,33 @@ import com.hcproj.healthcareprojectbackend.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * 커뮤니티 게시글을 나타내는 엔티티.
+ *
+ * <p><b>주요 필드</b></p>
+ * <ul>
+ *   <li>{@code category}: 게시글 분류(문자열 기반)</li>
+ *   <li>{@code isNotice}: 공지 여부</li>
+ *   <li>{@code viewCount}: 조회수(증가 메서드 제공)</li>
+ * </ul>
+ *
+ * <p><b>조회수 정책</b></p>
+ * <ul>
+ *   <li>{@link #increaseViewCount()}는 null 안전하게 증가시킨다.</li>
+ * </ul>
+ *
+ * <p><b>수정 정책</b></p>
+ * <ul>
+ *   <li>{@link #update(String, String, String, Boolean)}는 부분 업데이트 방식</li>
+ *   <li>null/blank인 값은 기존 값을 유지한다.</li>
+ * </ul>
+ *
+ * <p><b>삭제 정책</b></p>
+ * <ul>
+ *   <li>물리 삭제 대신 상태({@code DELETED}) 변경 + 소프트 삭제 적용</li>
+ *   <li>{@link #delete()}는 멱등(idempotent)하게 동작한다.</li>
+ * </ul>
+ */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -40,10 +67,31 @@ public class PostEntity extends BaseTimeEntity {
     @Column(name = "is_notice", nullable = false)
     private Boolean isNotice;
 
+    /**
+     * 조회수를 1 증가시킨다.
+     *
+     * <p>
+     * viewCount가 null인 데이터가 존재할 수 있다는 가정 하에
+     * null이면 0으로 간주하고 증가시킨다.
+     * </p>
+     */
     public void increaseViewCount() {
         this.viewCount = (this.viewCount == null ? 0 : this.viewCount) + 1;
     }
 
+    /**
+     * 게시글 내용을 부분 업데이트한다.
+     *
+     * <p>
+     * null 또는 blank인 문자열 파라미터는 무시되어 기존 값이 유지된다.
+     * isNotice는 null이면 무시된다.
+     * </p>
+     *
+     * @param title    변경할 제목(선택)
+     * @param content  변경할 본문(선택)
+     * @param category 변경할 카테고리(선택)
+     * @param isNotice 공지 여부(선택)
+     */
     public void update(String title, String content, String category, Boolean isNotice) {
 
         if (title != null && !title.isBlank()) {
@@ -63,6 +111,14 @@ public class PostEntity extends BaseTimeEntity {
         }
     }
 
+    /**
+     * 게시글을 삭제 처리한다(소프트 삭제).
+     *
+     * <p>
+     * 상태를 {@code DELETED}로 변경하고 삭제 시각을 기록한다.
+     * 이미 삭제된 경우에는 아무 동작도 하지 않는다(멱등성 보장).
+     * </p>
+     */
     public void delete() {
         // 1. 멱등성 체크
         if (this.status == PostStatus.DELETED || this.isDeleted()) {
