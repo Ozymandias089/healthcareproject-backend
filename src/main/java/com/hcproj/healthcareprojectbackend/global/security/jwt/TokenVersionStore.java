@@ -8,9 +8,9 @@ import java.time.Duration;
 
 /**
  * 유저 단위 Refresh Token "전체 무효화"를 위한 버전 저장소.
- *
+ * <p>
  * Key: rtv:{userId} -> int (문자열)
- *
+ * <p>
  * - refresh 발급 시 토큰에 ver 클레임을 넣는다.
  * - 재발급 시 토큰 ver == 현재 ver 일치 여부를 검사한다.
  * - 탈퇴/전체 로그아웃 시 ver를 증가시키면 기존 refresh는 전부 무효화된다.
