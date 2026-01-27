@@ -2,12 +2,27 @@
 
 Java Spring Boot 기반 헬스케어(운동/식단/커뮤니티/PT) 백엔드 프로젝트입니다.
 
-- Spring Boot 3.x, Spring Security, JPA
 - 개발 환경: H2(In-Memory)
 - 운영 환경: Oracle DB(예정)
 - 인증: JWT (principal = handle, details = userId)
 - 공통 응답 포맷: ApiResponse
 - 기능 단위 패키지 구조(auth / profile / trainer / calendar / pt / community ...)
+
+---
+
+## 스택
+
+- Language: Java 21
+- Framework: Spring Boot 3.5.x
+- Security: Spring Security
+- Data: Spring Data JPA, H2(개발), Oracle(운영 예정)
+- Cache: Redis
+- Auth: JWT (jjwt)
+- Messaging: Spring Mail (SMTP)
+- Cloud: AWS SDK (S3)
+- AI: Spring AI OpenAI Starter
+- Build: Gradle
+- Test: JUnit 5, Spring Security Test
 
 ---
 
@@ -17,28 +32,7 @@ Java Spring Boot 기반 헬스케어(운동/식단/커뮤니티/PT) 백엔드 �
 - Java 21
 - Gradle
 
-### 2) application.properties 설정
-개발 환경은 H2로 실행됩니다.
-
-```properties
-# H2 (dev)
-spring.datasource.url=jdbc:h2:mem:testdb;MODE=Oracle;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-spring.datasource.driver-class-name=org.h2.Driver
-spring.datasource.username=sa
-spring.datasource.password=
-
-spring.jpa.hibernate.ddl-auto=create-drop
-spring.jpa.open-in-view=false
-
-# JWT
-app.jwt.secret=CHANGE_ME_TO_LONG_RANDOM_SECRET_32CHARS_MINIMUM
-app.jwt.access-token-validity-seconds=3600
-app.jwt.refresh-token-validity-seconds=1209600
-````
-
-> `app.jwt.secret`는 최소 32자 이상을 권장합니다.
-
-### 3) 실행
+### 2) 실행
 
 ```bash
 ./gradlew bootRun
@@ -46,20 +40,43 @@ app.jwt.refresh-token-validity-seconds=1209600
 
 ---
 
-## 패키지 구조
+## 메뉴얼
 
-기능 단위로 묶습니다.
+### 환경 변수/설정
+- 개발 환경은 H2를 사용합니다.
+- `app.jwt.secret`는 최소 32자 이상을 권장합니다.
+- 운영 환경 전환 시 Oracle 접속 정보 및 DDL 전략을 조정하세요.
+
+### 테스트
+
+```bash
+./gradlew test
+```
+
+### 빌드
+
+```bash
+./gradlew build
+```
+
+### 로컬 H2 확인
+- H2 Console URL: `/h2-console`
+- JDBC URL: `jdbc:h2:mem:testdb`
+
+---
+
+## 패키지 구조
 
 ```
 global/   : 공통 인프라(보안, 예외, 응답 포맷, 설정)
-auth/     : 회원가입/로그인/토큰재발급/소셜로그인(예정)
+auth/     : 회원가입/로그인/토큰재발급/소셜로그인
 profile/  : 프로필/부상
 trainer/  : 트레이너 신청/승인
 calendar/ : 날짜별 메모
 pt/       : 화상PT 방/예약/참여자
 community/: 게시판/댓글
-diet/     : (추후) 음식/식단
-workout/  : (추후) 운동/운동기록
+diet/     : 음식/식단
+workout/  : 운동/운동기록
 ```
 
 ---
@@ -146,10 +163,34 @@ public class MeController {
 
 ---
 
-## 개발 메모
+## API 문서
 
-### H2 Console (dev)
+### 엔드포인트
+- Base URL: `/api`
+- 인증이 필요한 엔드포인트는 `Authorization: Bearer <accessToken>` 헤더가 필요합니다.
+- `@AdminOnly`가 적용된 엔드포인트는 관리자 권한이 필요합니다.
 
-* URL: `/h2-console`
-* JDBC URL: `jdbc:h2:mem:testdb`
+### 상세 문서
+- [엔드포인트 목록](docs/api-endpoints.md)
+- [에러 코드 표](docs/error-codes.md)
+- [환경변수 설정 예시](docs/env-vars.md)
+- [요청/응답 샘플](docs/request-response-samples.md)
+
+---
+
+## Related Repositories
+
+- **Backend**: https://github.com/Ozymandias089/healthcareproject-backend
+- **Frontend**: https://github.com/juyoungck/healthcareproject-frontend
+
+## Contributors
+
+| Name    | GitHub                                             | Role         | Responsibility                                                                                           |
+|---------|----------------------------------------------------|--------------|----------------------------------------------------------------------------------------------------------|
+| **최영훈** | [@Ozymandias089](https://github.com/Ozymandias089) | Backend Lead | Architecture design, Infrastructure setup, Backend core (Auth, Diet, Workout), AI integration, PR review |
+| **안태호** | [@saesamn](https://github.com//saesamn)            | Backend      | Diet feature development                                                                                 |
+| **이현성** | [@HyunsEEE](https://github.com/HyunsEEE)           | Backend      | Workout feature development                                                                              |
+| **김주영** | [@juyoungck](https://github.com/juyoungck)         | Frontend PM  | UI, API integration                                                                                      |
+| **박중건** | [@qkrwndrjs613](https://github.com/qkrwndrjs613)   | Frontend     | UI, UX                                                                                                   |
+| **백승진** | [@SeungjinB](https://github.com/SeungjinB)         | Frontend     | UI components                                                                                            |
 
