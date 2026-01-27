@@ -16,13 +16,13 @@ import java.util.List;
  *
  * <p><b>주요 기능</b></p>
  * <ul>
- *   <li>공지사항 조회</li>
- *   <li>커서 기반 목록 조회(피드)</li>
- *   <li>관리자용 필터/검색/통계 조회</li>
+ * <li>공지사항 조회</li>
+ * <li>커서 기반 목록 조회 (검색 조건별 분리)</li>
+ * <li>관리자용 필터/검색/통계 조회</li>
  * </ul>
  *
  * <p>
- * 목록 조회 쿼리는 상태가 {@code POSTED}인 게시글만 대상으로 한다(삭제글 제외).
+ * 일반 목록 조회 쿼리는 상태가 {@code POSTED}인 게시글만 대상으로 한다(삭제글 제외).
  * </p>
  */
 public interface PostRepository extends JpaRepository<PostEntity, Long> {
@@ -33,45 +33,100 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
      * @param status 조회할 게시글 상태(예: POSTED)
      * @return 공지글 목록 (postId 내림차순)
      */
-    List<PostEntity> findByIsNoticeTrueAndStatusOrderByPostIdDesc(com.hcproj.healthcareprojectbackend.community.entity.PostStatus status);
+    List<PostEntity> findByIsNoticeTrueAndStatusOrderByPostIdDesc(PostStatus status);
+
+    // ========================================================================
+    //  커서 기반 페이징 (User Side) - 검색 조건별 메서드 분리
+    // ========================================================================
 
     /**
-     * 커서 기반 게시글 목록 조회.
+     * 1. 검색어 없는 기본 목록 조회.
      *
-     * <p><b>커서 규칙</b></p>
-     * <ul>
-     *   <li>cursorId가 null이면 최신부터 조회</li>
-     *   <li>cursorId가 있으면 {@code postId < cursorId} 조건으로 "이전 글"을 조회</li>
-     * </ul>
-     *
-     * <p><b>필터/검색</b></p>
-     * <ul>
-     *   <li>category가 null이면 전체 카테고리</li>
-     *   <li>q가 null이면 검색 미적용, 아니면 title/content LIKE 검색</li>
-     *   <li>status는 POSTED만 포함(삭제/비공개 제외 목적)</li>
-     * </ul>
-     *
-     * <p><b>정렬</b></p>
-     * postId 내림차순(최신 우선)
-     *
-     * @param cursorId  커서 기준 postId(선택)
-     * @param category  카테고리(선택)
-     * @param q         검색어(선택)
-     * @param pageable  조회 크기 제한(페이지 크기만 사용)
+     * @param cursorId 커서 기준 postId (null이면 최신순)
+     * @param category 카테고리 (null이면 전체)
+     * @param pageable 페이징 정보 (limit)
      * @return 게시글 목록
      */
     @Query("SELECT p FROM PostEntity p " +
             "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
             "AND (:category IS NULL OR p.category = :category) " +
-            "AND (:q IS NULL OR (p.title LIKE %:q% OR p.content LIKE %:q%)) " +
-            "AND p.status = 'POSTED' " + // 삭제 안 된 것만
+            "AND p.status = 'POSTED' " +
             "ORDER BY p.postId DESC")
     List<PostEntity> findPostList(
             @Param("cursorId") Long cursorId,
-            @Param("category") String category, // String으로 받음
+            @Param("category") String category,
+            Pageable pageable
+    );
+
+    /**
+     * 2. 제목(Title) 검색.
+     */
+    @Query("SELECT p FROM PostEntity p " +
+            "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
+            "AND (:category IS NULL OR p.category = :category) " +
+            "AND p.status = 'POSTED' " +
+            "AND p.title LIKE %:q% " +
+            "ORDER BY p.postId DESC")
+    List<PostEntity> searchByTitle(
+            @Param("cursorId") Long cursorId,
+            @Param("category") String category,
             @Param("q") String q,
             Pageable pageable
     );
+
+    /**
+     * 3. 내용(Content) 검색.
+     */
+    @Query("SELECT p FROM PostEntity p " +
+            "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
+            "AND (:category IS NULL OR p.category = :category) " +
+            "AND p.status = 'POSTED' " +
+            "AND p.content LIKE %:q% " +
+            "ORDER BY p.postId DESC")
+    List<PostEntity> searchByContent(
+            @Param("cursorId") Long cursorId,
+            @Param("category") String category,
+            @Param("q") String q,
+            Pageable pageable
+    );
+
+    /**
+     * 4. 작성자(Author) 검색.
+     * <p>UserEntity와 조인하여 닉네임을 검색한다.</p>
+     */
+    @Query("SELECT p FROM PostEntity p " +
+            "LEFT JOIN UserEntity u ON p.userId = u.id " +
+            "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
+            "AND (:category IS NULL OR p.category = :category) " +
+            "AND p.status = 'POSTED' " +
+            "AND u.nickname LIKE %:q% " +
+            "ORDER BY p.postId DESC")
+    List<PostEntity> searchByAuthor(
+            @Param("cursorId") Long cursorId,
+            @Param("category") String category,
+            @Param("q") String q,
+            Pageable pageable
+    );
+
+    /**
+     * 5. 제목 + 내용(Title + Content) 검색.
+     */
+    @Query("SELECT p FROM PostEntity p " +
+            "WHERE (:cursorId IS NULL OR p.postId < :cursorId) " +
+            "AND (:category IS NULL OR p.category = :category) " +
+            "AND p.status = 'POSTED' " +
+            "AND (p.title LIKE %:q% OR p.content LIKE %:q%) " +
+            "ORDER BY p.postId DESC")
+    List<PostEntity> searchByTitleAndContent(
+            @Param("cursorId") Long cursorId,
+            @Param("category") String category,
+            @Param("q") String q,
+            Pageable pageable
+    );
+
+    // ========================================================================
+    //  관리자 / 통계 (Admin Side)
+    // ========================================================================
 
     /** 상태별 게시글 수를 반환한다(관리자 통계용). */
     long countByStatus(PostStatus status);
@@ -102,10 +157,6 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
 
     /**
      * 관리자용 게시글 전체 개수 조회 (필터링 적용).
-     *
-     * <p>
-     * {@link #findAdminPostList(String, PostStatus, String, Pageable)}와 동일한 조건을 적용한다.
-     * </p>
      */
     @Query("SELECT COUNT(p) FROM PostEntity p " +
             "LEFT JOIN UserEntity u ON p.userId = u.id " +
