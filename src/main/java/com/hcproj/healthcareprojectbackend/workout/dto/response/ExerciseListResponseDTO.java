@@ -12,6 +12,7 @@ public record ExerciseListResponseDTO(
             String name,
             String imageUrl,
             String bodyPart,
-            String difficulty
+            String difficulty,
+            String youtubeUrl
     ) {}
 }
