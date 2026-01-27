@@ -2,30 +2,62 @@ package com.hcproj.healthcareprojectbackend.pt.dto.response;
 
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomStatus;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomType;
-import lombok.Builder;
+import lombok.*;
+
 import java.time.Instant;
 import java.util.List;
 
+@Getter
 @Builder
-public record PtRoomListResponseDTO(
-        List<ItemDTO> items,
-        PageInfo pageInfo
-) {
+@AllArgsConstructor
+@NoArgsConstructor
+public class PtRoomListResponseDTO {
+
+    private List<ItemDTO> items;
+    private PageInfo pageInfo;
+
+    @Getter
     @Builder
-    public record ItemDTO(
-            Long ptRoomId,
-            String title,
-            PtRoomType roomType,
-            PtRoomStatus status,
-            Instant scheduledAt,
-            Boolean isPrivate,
-            TrainerDTO trainer,
-            ParticipantsDTO participants
-    ) {}
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ItemDTO {
+        private Long ptRoomId;
+        private String title;
+        private String description;
+        private PtRoomType roomType;
+        private PtRoomStatus status;
+        private Instant scheduledAt;
+        private Boolean isPrivate;
+        private TrainerDTO trainer;
+        private ParticipantsDTO participants;
+    }
 
-    public record TrainerDTO(String nickname, String handle, String profileImageUrl) {}
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class TrainerDTO {
+        private String nickname;
+        private String handle;
+        private String profileImageUrl;
+    }
 
-    public record ParticipantsDTO(int current, int max) {}
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ParticipantsDTO {
+        private int current;
+        private Integer max;
+    }
 
-    public record PageInfo(Long nextCursorId, boolean hasNext, int size) {}
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class PageInfo {
+        private Long nextCursorId;
+        private boolean hasNext;
+        private int size;
+    }
 }
