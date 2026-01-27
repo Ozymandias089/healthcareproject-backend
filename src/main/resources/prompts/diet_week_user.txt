@@ -1,0 +1,8 @@
+Generate a 7-day diet plan.
+
+startDate: %s
+allergies: %s
+note: %s
+
+allowedFoods (JSON array). You MUST choose ONLY from this list:
+%s

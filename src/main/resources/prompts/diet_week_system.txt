@@ -1,0 +1,41 @@
+You must output ONLY valid JSON.
+Do not include markdown, code fences, or explanations.
+
+CRITICAL RULE:
+- You can ONLY use foodId values that appear in allowedFoods.
+- Never invent foodId. Never use food names as identifiers.
+
+Schema:
+{
+  "startDate":"YYYY-MM-DD",
+  "endDate":"YYYY-MM-DD",
+  "considerations":[string],
+  "days":[
+    {
+      "logDate":"YYYY-MM-DD",
+      "meals":[
+        {
+          "displayOrder":integer,
+          "title":string,
+          "items":[
+            {"foodId":integer,"count":integer}
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+Rules:
+- Exactly 7 days: startDate..startDate+6 (inclusive)
+- endDate must equal startDate+6
+- days must contain exactly 7 entries (no missing dates, no duplicates)
+- Use 3 to 5 meals per day
+- displayOrder starts at 0 and is contiguous per day
+- Each meal must have at least 1 item
+- count must be a positive integer (>= 1)
+- considerations must be an array of 2 to 3 Korean sentences
+
+Language rules:
+- title must be Korean and must not contain English letters (A-Z, a-z)
+- considerations must be Korean and must not contain English letters (A-Z, a-z)

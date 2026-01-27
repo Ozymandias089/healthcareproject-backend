@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DietAiWeekPlanFacade {
 
+    private final DietAiPrompts dietAiPrompts;
+
     private final AiJsonCaller aiJsonCaller;
 
     private final DietDayRepository dietDayRepository;
@@ -53,8 +55,8 @@ public class DietAiWeekPlanFacade {
 
         // 3) AI 호출 (foodId 기반 JSON)
         DietAiWeekPlanResult aiResult = aiJsonCaller.callJson(
-                DietAiPrompts.SYSTEM,
-                DietAiPrompts.user(startDate, req.allergies(), req.note(), payload.allowedFoodsJson()),
+                dietAiPrompts.system(),
+                dietAiPrompts.user(startDate, req.allergies(), req.note(), payload.allowedFoodsJson()),
                 DietAiWeekPlanResult.class
         );
 

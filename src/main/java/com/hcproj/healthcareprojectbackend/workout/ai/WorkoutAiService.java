@@ -37,6 +37,8 @@ public class WorkoutAiService {
     private final AiJsonCaller aiJsonCaller;
     private final WorkoutAiExerciseCatalogService catalogService;
 
+    private final WorkoutAiPrompts workoutAiPrompts;
+
     /**
      * 지정된 날짜들에 대한 운동 루틴을 생성한다.
      *
@@ -48,8 +50,8 @@ public class WorkoutAiService {
         var payload = catalogService.buildAllowedExercisesPayload(180);
 
         WorkoutAiRoutineResult result = aiJsonCaller.callJson(
-                WorkoutAiPrompts.SYSTEM,
-                WorkoutAiPrompts.user(dates, additionalRequest, payload.allowedExercisesJson()),
+                workoutAiPrompts.system(),
+                workoutAiPrompts.user(dates, additionalRequest, payload.allowedExercisesJson()),
                 WorkoutAiRoutineResult.class
         );
 
