@@ -83,4 +83,5 @@ public class PtRoomEntity extends BaseTimeEntity {
         this.status = PtRoomStatus.FORCE_CLOSED;
         markDeleted();
     }
+
 }
