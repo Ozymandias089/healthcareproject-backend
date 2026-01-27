@@ -110,6 +110,7 @@ public enum ErrorCode {
     SOCIAL_ALREADY_CONNECTED(HttpStatus.CONFLICT, "AUTH-012", "이미 해당 프로바이더를 연동했습니다"),
     SOCIAL_ACCOUNT_NOT_CONNECTED(HttpStatus.BAD_REQUEST, "AUTH-013", "해당 프로바이더가 연결되어있지 않습니다"),
     CANNOT_DISCONNECT_LAST_LOGIN_METHOD(HttpStatus.CONFLICT, "AUTH-014", "마지막 로그인 수단입니다"),
+    USER_SUSPENDED(HttpStatus.FORBIDDEN, "AUTH-015", "이용이 정지된 계정입니다."),
 
     // -------------------------
     // User
@@ -147,6 +148,7 @@ public enum ErrorCode {
     INVALID_ENTRY_CODE(HttpStatus.FORBIDDEN, "PT-004", "참여 코드가 일치하지 않습니다"),
     CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "PT-005", "진행 중이거나 종료된 방의 예약은 취소할 수 없습니다"),
     NOT_JOINED(HttpStatus.CONFLICT, "PT-006", "해당 사용자는 현재 방에 참여 중이 아닙니다"),
+    ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "PT-007", "존재하지 않는 방입니다."),
 
     // -------------------------
     // Exercise

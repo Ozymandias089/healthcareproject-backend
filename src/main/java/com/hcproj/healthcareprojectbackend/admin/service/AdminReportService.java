@@ -10,6 +10,8 @@ import com.hcproj.healthcareprojectbackend.community.repository.PostRepository;
 import com.hcproj.healthcareprojectbackend.community.repository.ReportRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomEntity;
+import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +29,7 @@ public class AdminReportService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final PtRoomRepository ptRoomRepository;
 
     // 1. 신고 목록 조회 (status, type 필터 적용)
     @Transactional(readOnly = true)
@@ -46,7 +48,7 @@ public class AdminReportService {
             reports = reportRepository.findAll();
         }
 
-        // (2) Type(POST/COMMENT) 필터링
+        // (2) Type(POST/COMMENT/PT_ROOM) 필터링
         if (typeStr != null && !typeStr.isBlank()) {
             try {
                 ReportType typeFilter = ReportType.valueOf(typeStr.toUpperCase());
@@ -63,28 +65,34 @@ public class AdminReportService {
         Map<Long, UserEntity> reporterMap = reporterIds.isEmpty() ? Collections.emptyMap() :
                 userRepository.findAllById(reporterIds).stream().collect(Collectors.toMap(UserEntity::getId, u -> u));
 
-        // (4) DTO 변환 (여기에 작성자 조회 로직 추가!)
+        // (4) DTO 변환
         List<AdminReportListResponseDTO.AdminReportItemDTO> list = reports.stream()
                 .map(report -> {
                     // A. 신고자(Reporter) 정보 가져오기
                     UserEntity reporter = reporterMap.get(report.getReporterId());
 
-                    // B. [추가됨] 신고 당한 글/댓글의 작성자(Target Author) 찾기
+                    // B. 신고 당한 글/댓글/방의 작성자(Target Author) 찾기
                     String targetAuthorHandle = "알 수 없음"; // 기본값 (삭제된 경우 등)
 
                     if (report.getType() == ReportType.POST) {
                         // 게시글 조회 -> 작성자 ID 확인 -> 유저 닉네임 조회
                         targetAuthorHandle = postRepository.findById(report.getTargetId())
                                 .flatMap(post -> userRepository.findById(post.getUserId()))
-                                .map(UserEntity::getNickname) // [수정] getHandle -> getNickname
+                                .map(UserEntity::getNickname)
                                 .orElse("삭제된 게시글");
                     }
                     else if (report.getType() == ReportType.COMMENT) {
                         // 댓글 조회 -> 작성자 ID 확인 -> 유저 닉네임 조회
                         targetAuthorHandle = commentRepository.findById(report.getTargetId())
                                 .flatMap(comment -> userRepository.findById(comment.getUserId()))
-                                .map(UserEntity::getNickname) // [수정] getHandle -> getNickname
+                                .map(UserEntity::getNickname)
                                 .orElse("삭제된 댓글");
+                    }
+                    else if (report.getType() == ReportType.PT_ROOM) { // [추가됨] 화상 PT 트레이너 찾기
+                        targetAuthorHandle = ptRoomRepository.findById(report.getTargetId())
+                                .flatMap(room -> userRepository.findById(room.getTrainerId()))
+                                .map(UserEntity::getNickname)
+                                .orElse("삭제/종료된 방");
                     }
 
                     return AdminReportListResponseDTO.AdminReportItemDTO.builder()
@@ -124,14 +132,13 @@ public class AdminReportService {
         }
     }
 
-    // [내부 메서드] 신고 처리 승인 시 로직
+    // [내부 메서드] 신고 처리 승인 시 로직 (실제 삭제/종료 수행)
     private void processReportAndContent(ReportEntity currentReport) {
         currentReport.process(); // 신고 상태 'PROCESSED'로 변경
 
         if (currentReport.getType() == ReportType.POST) {
             PostEntity post = postRepository.findById(currentReport.getTargetId()).orElse(null);
-
-            // [핵심 방어] 게시글이 존재하고, '공지사항(isNotice)'이 아닐 때만 삭제!
+            // 게시글이 존재하고, '공지사항'이 아닐 때만 삭제
             if (post != null && !Boolean.TRUE.equals(post.getIsNotice())) {
                 post.delete();
             }
@@ -142,13 +149,22 @@ public class AdminReportService {
                 comment.delete();
             }
         }
+        else if (currentReport.getType() == ReportType.PT_ROOM) { // [추가됨] 화상 PT 강제 종료
+            PtRoomEntity room = ptRoomRepository.findById(currentReport.getTargetId()).orElse(null);
+            if (room != null) {
+                room.forceClose(); // 강제 종료 및 삭제 처리 (PtRoomEntity에 구현된 메서드)
+            }
+        }
 
-        // 연관된 다른 신고들도 일괄 처리
+        // 연관된 다른 신고들도 일괄 처리 (같은 타겟에 대한 중복 신고들)
         List<ReportEntity> relatedReports = reportRepository.findByTargetIdAndType(
                 currentReport.getTargetId(), currentReport.getType()
         );
         for (ReportEntity related : relatedReports) {
-            related.process();
+            // 이미 처리된 건 제외하고 처리 상태로 변경
+            if (related.getStatus() != ReportStatus.PROCESSED) {
+                related.process();
+            }
         }
     }
 }

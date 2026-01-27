@@ -9,6 +9,7 @@ import com.hcproj.healthcareprojectbackend.community.repository.PostRepository;
 import com.hcproj.healthcareprojectbackend.community.repository.ReportRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,9 @@ public class ReportService {
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+
+    // [추가] 화상 PT 방 조회용
+    private final PtRoomRepository ptRoomRepository;
 
     @Transactional
     public ReportCreateResponseDTO createReport(Long userId, ReportCreateRequestDTO request) {
@@ -37,17 +41,20 @@ public class ReportService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // 3. 신고 대상 조회 및 검증
+        // [이동됨] 3. 중복 신고 방지 (모든 타입에 적용하기 위해 위로 올림)
+        if (reportRepository.existsByReporterIdAndTargetIdAndType(userId, request.id(), type)) {
+            throw new BusinessException(ErrorCode.ALREADY_REPORTED);
+        }
+
+        // 4. 신고 대상 조회 및 검증
         if (type == ReportType.POST) {
             PostEntity post = postRepository.findById(request.id())
                     .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
-            // [방어 1] 본인 게시글 신고 불가
             if (post.getUserId().equals(userId)) {
                 throw new BusinessException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
             }
 
-            // [방어 2] 공지사항(isNotice) 신고 불가 (수정됨!)
             if (Boolean.TRUE.equals(post.getIsNotice())) {
                 throw new BusinessException(ErrorCode.NOTICE_REPORT_NOT_ALLOWED);
             }
@@ -56,23 +63,26 @@ public class ReportService {
             CommentEntity comment = commentRepository.findById(request.id())
                     .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
-            // [방어 3] 본인 댓글 신고 불가
             if (comment.getUserId().equals(userId)) {
                 throw new BusinessException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
             }
 
-            // [추가] 중복 신고 방지
-            if (reportRepository.existsByReporterIdAndTargetIdAndType(userId, request.id(), type)) {
-                throw new BusinessException(ErrorCode.ALREADY_REPORTED);
+        } else if (type == ReportType.PT_ROOM) { // [추가됨] 화상 PT 신고 로직
+            com.hcproj.healthcareprojectbackend.pt.entity.PtRoomEntity room = ptRoomRepository.findById(request.id())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
+
+            // [방어] 본인이 만든 방 신고 불가
+            if (room.getTrainerId().equals(userId)) {
+                throw new BusinessException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
             }
         }
 
-        // 4. 신고 저장
+        // 5. 신고 저장
         ReportEntity report = ReportEntity.builder()
                 .reporterId(userId)
                 .type(type)
                 .targetId(request.id())
-                .reason(request.cause())
+                .reason(request.cause()) // 내용 저장
                 .status(ReportStatus.PENDING)
                 .build();
 
