@@ -75,7 +75,11 @@ public class FoodService {
                         entity.getFoodId(),
                         entity.getName(),
                         entity.getImageUrl(),
-                        entity.getAllergyCodes()
+                        entity.getAllergyCodes(),
+                        entity.getCalories(),
+                        entity.getCarbs(),
+                        entity.getProtein(),
+                        entity.getFat()
                 ))
                 .toList();
 

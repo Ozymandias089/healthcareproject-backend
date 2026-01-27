@@ -185,13 +185,12 @@ public enum ErrorCode {
     // Admin
     // -------------------------
 
-    ADMIN_FORBIDDEN(HttpStatus.FORBIDDEN, "ADMIN-001", "관리자 권한이 없습니다"),
-    USER_ALREADY_BANNED(HttpStatus.CONFLICT, "ADMIN-002", "이미 차단된 회원입니다"),
-    USER_NOT_BANNED(HttpStatus.CONFLICT, "ADMIN-003", "차단되지 않은 회원입니다"),
-    CANNOT_BAN_ADMIN(HttpStatus.FORBIDDEN, "ADMIN-004", "관리자는 차단할 수 없습니다"),
-    TRAINER_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-005", "트레이너 신청 내역이 없습니다"),
-    TRAINER_REJECT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "ADMIN-006", "거절 사유를 입력해주세요"),
-    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-007", "신고 내역을 찾을 수 없습니다"),
+    USER_ALREADY_BANNED(HttpStatus.CONFLICT, "ADMIN-001", "이미 차단된 회원입니다"),
+    USER_NOT_BANNED(HttpStatus.CONFLICT, "ADMIN-002", "차단되지 않은 회원입니다"),
+    CANNOT_BAN_ADMIN(HttpStatus.FORBIDDEN, "ADMIN-003", "관리자는 차단할 수 없습니다"),
+    TRAINER_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-004", "트레이너 신청 내역이 없습니다"),
+    TRAINER_REJECT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "ADMIN-005", "거절 사유를 입력해주세요"),
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "ADMIN-006", "신고 내역을 찾을 수 없습니다"),
 
     // -------------------------
     // Upload
