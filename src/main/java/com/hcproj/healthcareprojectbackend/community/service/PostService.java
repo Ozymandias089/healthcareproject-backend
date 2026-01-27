@@ -97,8 +97,9 @@ public class PostService {
                             nickname,
                             handle,
                             entity.getCreatedAt(),
-                            0L, // commentCount (필요 시 추후 구현)
-                            entity.getViewCount()
+                            0L,                   // commentCount
+                            entity.getViewCount(),
+                            0L                    // [추가] likeCount (일단 0L로 전달, 나중에 로직 구현)
                     );
                 })
                 .toList();
