@@ -69,21 +69,20 @@ public class PostService {
 
         List<PostListResponseDTO.PostSimpleDTO> list = entities.stream()
                 .map(entity -> {
-                    // 엔티티의 Long을 int로 안전하게 변환
-                    int views = (entity.getViewCount() != null) ? entity.getViewCount().intValue() : 0;
+                    Long views = (entity.getViewCount() != null) ? entity.getViewCount() : 0L;
 
                     return PostListResponseDTO.PostSimpleDTO.builder()
                             .postId(entity.getPostId())
                             .category(entity.getCategory())
                             .title(entity.getTitle())
-                            .viewCount(views)        // int로 전달
-                            .commentCount(0)        // int로 전달
-                            .likeCount(0)           // int로 전달
+                            .viewCount(views)
+                            .commentCount(0L)
+                            .likeCount(0L)
                             .createdAt(entity.getCreatedAt())
                             .isNotice(entity.getIsNotice())
                             .build();
                 })
-                .toList();
+                .toList(); // 이제 List<Object> 에러가 사라집니다.
 
         return PostListResponseDTO.builder()
                 .list(list)
@@ -111,8 +110,8 @@ public class PostService {
                 .category(post.getCategory())
                 .title(post.getTitle())
                 .content(post.getContent())
-                .viewCount((int) views) // (int) 형변환 추가
-                .likeCount(0)           // int로 전달
+                .viewCount(views)
+                .likeCount(0L)
                 .createdAt(post.getCreatedAt())
                 .isOwner(false)
                 .build();
