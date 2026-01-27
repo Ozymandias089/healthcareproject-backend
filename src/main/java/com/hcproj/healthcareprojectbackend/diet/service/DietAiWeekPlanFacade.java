@@ -65,7 +65,7 @@ public class DietAiWeekPlanFacade {
         Persisted persisted = persistAiResult(userId, aiResult);
 
         // 6) 응답 조립 (foods 조인 + nutrition 계산)
-        return buildResponse(startDate, endDate, persisted);
+        return buildResponse(startDate, endDate, aiResult.consideration(), persisted);
     }
 
     private void deleteExistingRange(Long userId, LocalDate start, LocalDate end) {
@@ -140,7 +140,7 @@ public class DietAiWeekPlanFacade {
         return new Persisted(savedDays, savedMeals, savedItems);
     }
 
-    private AiDietWeekPlanResponseDTO buildResponse(LocalDate startDate, LocalDate endDate, Persisted persisted) {
+    private AiDietWeekPlanResponseDTO buildResponse(LocalDate startDate, LocalDate endDate, String consideration, Persisted persisted) {
 
         // food map
         Set<Long> usedFoodIds = persisted.items.stream().map(DietMealItemEntity::getFoodId).collect(Collectors.toSet());
@@ -234,6 +234,7 @@ public class DietAiWeekPlanFacade {
         return new AiDietWeekPlanResponseDTO(
                 startDate,
                 endDate,
+                consideration,
                 days,
                 new AiDietWeekPlanResponseDTO.PageInfo(7)
         );

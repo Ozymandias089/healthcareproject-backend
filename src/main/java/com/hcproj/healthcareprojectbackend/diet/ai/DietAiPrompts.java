@@ -44,6 +44,7 @@ Schema:
 {
   "startDate":"YYYY-MM-DD",
   "endDate":"YYYY-MM-DD",
+  "consideration":string,
   "days":[
     {
       "logDate":"YYYY-MM-DD",
