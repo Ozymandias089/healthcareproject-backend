@@ -178,6 +178,11 @@ public class MeController {
 
 ---
 
+## Related Repositories
+
+- **Backend**: https://github.com/Ozymandias089/healthcareproject-backend
+- **Frontend**: https://github.com/juyoungck/healthcareproject-frontend
+
 ## Contributors
 
 | Name    | GitHub                                             | Role         | Responsibility                                                                                           |
