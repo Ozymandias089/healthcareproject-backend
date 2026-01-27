@@ -6,6 +6,25 @@ import lombok.*;
 
 import java.time.LocalDate;
 
+/**
+ * 사용자의 특정 날짜에 대한 운동 기록(하루 운동)의 루트 엔티티.
+ *
+ * <p><b>모델링 의도</b></p>
+ * <ul>
+ *   <li>사용자(userId)는 하루(logDate)에 하나의 운동 기록만 가진다.</li>
+ *   <li>하루 운동은 여러 운동 항목({@link WorkoutItemEntity})으로 구성된다.</li>
+ * </ul>
+ *
+ * <p><b>DB 제약</b></p>
+ * <ul>
+ *   <li>{@code uk_workout_days_user_date}: (user_id, log_date) 유니크</li>
+ * </ul>
+ *
+ * <p>
+ * title은 사용자가 지정한 "오늘의 운동" 제목/요약이며,
+ * 실제 운동 구성은 하위 엔티티에서 관리된다.
+ * </p>
+ */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)

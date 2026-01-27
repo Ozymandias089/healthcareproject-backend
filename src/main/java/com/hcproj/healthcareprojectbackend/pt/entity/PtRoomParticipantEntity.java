@@ -6,6 +6,28 @@ import lombok.*;
 
 import java.time.Instant;
 
+/**
+ * PT 방 참가자 정보를 나타내는 엔티티.
+ *
+ * <p><b>모델링 규칙</b></p>
+ * <ul>
+ *   <li>한 사용자(userId)는 같은 PT 방(ptRoomId)에 최대 1개의 참가 레코드만 가진다.</li>
+ * </ul>
+ *
+ * <p><b>DB 제약</b></p>
+ * <ul>
+ *   <li>{@code uk_pt_room_participant_room_user}: (pt_room_id, user_id) 유니크</li>
+ *   <li>{@code idx_pt_room_participant_user}: user_id 인덱스</li>
+ *   <li>{@code idx_pt_room_participant_room_status}: (pt_room_id, status) 인덱스</li>
+ * </ul>
+ *
+ * <p><b>상태 전이</b></p>
+ * <ul>
+ *   <li>JOINED → LEFT/KICKED (퇴장 시각 기록)</li>
+ *   <li>재입장 시 {@link #join()}에서 leftAt을 null로 초기화</li>
+ *   <li>각 메서드는 멱등(idempotent)하게 동작한다.</li>
+ * </ul>
+ */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -40,7 +62,14 @@ public class PtRoomParticipantEntity extends BaseTimeEntity {
     @Column(name = "left_at")
     private Instant leftAt;
 
-    /* 방 입장 처리 */
+    /**
+     * 참가자의 방 입장을 처리한다.
+     *
+     * <p>
+     * 이미 JOINED이면 아무 동작도 하지 않는다(멱등성).
+     * 재입장 시 leftAt을 초기화한다.
+     * </p>
+     */
     public void join() {
         if (this.status == PtParticipantStatus.JOINED) return;
 
@@ -49,7 +78,13 @@ public class PtRoomParticipantEntity extends BaseTimeEntity {
         this.leftAt = null; // 재입장일 경우 퇴장 시간 초기화
     }
 
-    /* 방 퇴장 처리  */
+    /**
+     * 참가자의 방 퇴장을 처리한다.
+     *
+     * <p>
+     * 이미 LEFT이거나 CANCELLED이면 무시한다(멱등성).
+     * </p>
+     */
     public void exit() {
         if (this.status == PtParticipantStatus.LEFT || this.status == PtParticipantStatus.CANCELLED) return;
 
@@ -57,7 +92,13 @@ public class PtRoomParticipantEntity extends BaseTimeEntity {
         this.leftAt = Instant.now(); // 퇴장 시간 기록
     }
 
-    /* 사용자 강퇴 처리  */
+    /**
+     * 참가자를 강퇴 처리한다.
+     *
+     * <p>
+     * 이미 KICKED이거나 LEFT이면 무시한다(멱등성).
+     * </p>
+     */
     public void kick() {
         if (this.status == PtParticipantStatus.KICKED || this.status == PtParticipantStatus.LEFT) return;
 

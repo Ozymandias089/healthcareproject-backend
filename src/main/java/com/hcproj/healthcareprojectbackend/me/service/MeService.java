@@ -69,17 +69,12 @@ public class MeService {
 
     // 회원탈퇴
     @Transactional
-    public void withdraw(Long userId, WithdrawalRequestDTO request) {
+    public void withdraw(Long userId) {
         UserEntity user = getUserOrThrow(userId);
 
         // 이미 탈퇴된 회원의 경우 409 CONFLICT 반환
         if (user.getStatus() == UserStatus.WITHDRAWN) {
             throw new BusinessException(ErrorCode.ALREADY_WITHDRAWN);
-        }
-
-        // 비밀번호 검증(본인 확인)
-        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
         }
 
         user.withdraw();
