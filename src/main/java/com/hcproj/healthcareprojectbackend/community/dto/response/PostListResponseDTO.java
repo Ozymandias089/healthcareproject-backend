@@ -1,25 +1,13 @@
 package com.hcproj.healthcareprojectbackend.community.dto.response;
 
 import lombok.Builder;
-import java.time.Instant;
 import java.util.List;
 
+/**
+ * 게시글 목록 조회 응답 DTO
+ */
 @Builder
-public class PostListResponseDTO {
-
-    private List<PostSimpleDTO> list; // 게시글 목록
-    private Long nextCursorId;        // 다음 커서 ID
-
-    // PostService 내부에서 사용하는 DTO (static 필수)
-    @Builder
-    public record PostSimpleDTO(
-            Long postId,
-            String category,
-            String title,
-            Long viewCount,
-            Long commentCount,
-            Long likeCount,
-            Instant createdAt,
-            Boolean isNotice
-    ) {}
-}
+public record PostListResponseDTO(
+        List<PostSummaryDto> list, // PostSimpleDTO 대신 PostSummaryDto 사용
+        Long nextCursorId        // 다음 조회를 위한 커서 ID
+) {}
