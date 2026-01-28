@@ -24,4 +24,7 @@ public interface CommentRepository extends JpaRepository<CommentEntity, Long> {
      * @param postId 게시글 ID
      */
     List<CommentEntity> findAllByPostId(Long postId);
+
+    // [추가] 게시글 상세 조회 시 댓글 개수 카운트용 (PostService에서 사용)
+    long countByPostId(Long postId);
 }
