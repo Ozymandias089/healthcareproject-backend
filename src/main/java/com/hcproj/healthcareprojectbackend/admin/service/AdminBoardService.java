@@ -158,4 +158,19 @@ public class AdminBoardService {
                 .comments(Collections.emptyList())
                 .build();
     }
+
+    @Transactional
+    public void restorePost(Long postId) {
+        // 1. 게시글 조회 (삭제된 글도 찾을 수 있어야 함)
+        PostEntity post = postRepository.findById(postId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+        // 2. 이미 게시중(POSTED)인 경우 멱등성 처리
+        if (post.getStatus() == PostStatus.POSTED) {
+            return;
+        }
+
+        // 3. 복구 로직 수행
+        post.restore();
+    }
 }

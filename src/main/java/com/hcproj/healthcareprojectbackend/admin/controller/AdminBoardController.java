@@ -7,6 +7,7 @@ import com.hcproj.healthcareprojectbackend.community.dto.response.PostResponseDT
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.AdminOnly;
 import com.hcproj.healthcareprojectbackend.global.security.annotation.CurrentUserId;
+import com.hcproj.healthcareprojectbackend.me.dto.response.MessageResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -59,5 +60,16 @@ public class AdminBoardController {
             @Valid @RequestBody AdminNoticeCreateRequestDTO request
     ) {
         return ApiResponse.created(adminBoardService.createNotice(adminUserId, request));
+    }
+
+    /**
+     * 게시글 복구 (Soft Delete 해제) API
+     * PATCH /api/admin/board/post/{postId}/restore
+     */
+    @AdminOnly
+    @PatchMapping("/post/{postId}/restore")
+    public ApiResponse<MessageResponseDTO> restorePost(@PathVariable Long postId) {
+        adminBoardService.restorePost(postId);
+        return ApiResponse.ok(new MessageResponseDTO("POST_RESTORED"));
     }
 }
