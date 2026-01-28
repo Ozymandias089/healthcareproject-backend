@@ -31,14 +31,14 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
     // ========================================================================
 
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:category = 'ALL' OR p.category = :category) " +
+            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " + // [수정] IS NULL 추가
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
             "AND p.status = :status " +
             "ORDER BY p.postId DESC")
     List<PostEntity> findPostList(
             @Param("cursorId") Long cursorId,
             @Param("category") String category,
-            @Param("status") PostStatus status, // 여기가 추가되어야 합니다!
+            @Param("status") PostStatus status,
             Pageable pageable
     );
 

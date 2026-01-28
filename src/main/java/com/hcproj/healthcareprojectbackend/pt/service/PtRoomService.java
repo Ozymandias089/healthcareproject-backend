@@ -2,6 +2,10 @@ package com.hcproj.healthcareprojectbackend.pt.service;
 
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
+import com.hcproj.healthcareprojectbackend.community.entity.ReportEntity;
+import com.hcproj.healthcareprojectbackend.community.entity.ReportStatus;
+import com.hcproj.healthcareprojectbackend.community.entity.ReportType;
+import com.hcproj.healthcareprojectbackend.community.repository.ReportRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.pt.dto.request.PtRoomCreateRequestDTO;
@@ -35,6 +39,7 @@ public class PtRoomService {
     private final UserRepository userRepository;
     private final PtJanusRoomKeyService ptJanusRoomKeyService;
     private final TrainerInfoRepository trainerInfoRepository;
+    private final ReportRepository reportRepository;
 
     private static final String CHAR_POOL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int CODE_LENGTH = 6;
@@ -166,6 +171,16 @@ public class PtRoomService {
 
         // ✅ 키 반납 (멱등)
         ptJanusRoomKeyService.releaseByPtRoomId(ptRoomId);
+
+        List<ReportEntity> pendingReports = reportRepository.findByTargetIdAndTypeAndStatus(
+                ptRoomId,
+                ReportType.PT_ROOM, // PT 방 타입
+                ReportStatus.PENDING
+        );
+
+        for (ReportEntity report : pendingReports) {
+            report.process(); // 신고 상태를 PROCESSED로 변경
+        }
     }
 
     // =================================================================================

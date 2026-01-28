@@ -135,5 +135,6 @@ public class PostEntity extends BaseTimeEntity {
     public void restore() {
         if (this.status == PostStatus.POSTED) return;
         this.status = PostStatus.POSTED;
+        this.undoDeletion();
     }
 }
