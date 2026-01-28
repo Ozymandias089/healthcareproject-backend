@@ -17,7 +17,7 @@ public record PostDetailResponseDTO(
         Instant createdAt,
         Instant updatedAt,         // [추가] 수정일 (null 가능)
         boolean isOwner,
-        List<Object> comments      // [추가] 빈 리스트라도 줘야 에러 안 남 (추후 CommentDTO로 변경)
+        List<PostResponseDTO.CommentDTO> comments
 ) {
     @Builder
     public record AuthorDTO(

@@ -25,7 +25,7 @@ public class CommentController {
             @PathVariable("postId") Long postId,
             @RequestBody CommentCreateRequestDTO request
     ) {
-        return ApiResponse.created(commentService.createComment(userId, postId, request));
+        return ApiResponse.ok(commentService.createComment(userId, postId, request));
     }
 
     // 2. 댓글 수정
