@@ -47,6 +47,9 @@ public class WorkoutDayEntity extends BaseTimeEntity {
     @Column(name = "log_date", nullable = false)
     private LocalDate logDate;
 
+    @Column(name = "total_minutes", nullable = false)
+    private Integer totalMinutes;
+
     @Lob
     @Column(name = "title", nullable = false)
     private String title;

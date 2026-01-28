@@ -135,6 +135,7 @@ public class WorkoutAiRoutinesFacade {
                 day = WorkoutDayEntity.builder()
                         .userId(userId)
                         .logDate(d.logDate())
+                        .totalMinutes(d.totalMinutes())
                         .title(d.title())
                         .build();
             } else {
