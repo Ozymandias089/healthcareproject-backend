@@ -109,6 +109,7 @@ public class PostEntity extends BaseTimeEntity {
         if (isNotice != null) {
             this.isNotice = isNotice;
         }
+
     }
 
     /**
@@ -128,5 +129,11 @@ public class PostEntity extends BaseTimeEntity {
         // 2. 상태 변경 및 삭제 시간 기록
         this.status = PostStatus.DELETED;
         this.markDeleted(); // BaseTimeEntity의 deletedAt에 현재 시간 기록
+    }
+
+    // 게시글 복구
+    public void restore() {
+        if (this.status == PostStatus.POSTED) return;
+        this.status = PostStatus.POSTED;
     }
 }
