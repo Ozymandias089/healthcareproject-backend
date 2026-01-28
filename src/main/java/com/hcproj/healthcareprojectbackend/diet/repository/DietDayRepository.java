@@ -1,7 +1,10 @@
 package com.hcproj.healthcareprojectbackend.diet.repository;
 
+import com.hcproj.healthcareprojectbackend.calendar.dto.internal.DayCountRow;
 import com.hcproj.healthcareprojectbackend.diet.entity.DietDayEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -35,4 +38,32 @@ public interface DietDayRepository extends JpaRepository<DietDayEntity, Long> {
      * @param endDate 종료일(포함)
      */
     List<DietDayEntity> findAllByUserIdAndLogDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
+
+
+    interface DayCountView {
+        LocalDate getDate();
+        Long getPlannedCount();
+        Long getDoneCount();
+    }
+
+    @Query(value = """
+    SELECT
+        dd.log_date AS date,
+        COUNT(dmi.diet_meal_item_id) AS plannedCount,
+        SUM(CASE WHEN dmi.is_checked = TRUE THEN 1 ELSE 0 END) AS doneCount
+    FROM diet_days dd
+    JOIN diet_meals dm
+      ON dm.diet_day_id = dd.diet_day_id
+    JOIN diet_meal_items dmi
+      ON dmi.diet_meal_id = dm.diet_meal_id
+    WHERE dd.user_id = :userId
+      AND dd.log_date BETWEEN :startDate AND :endDate
+    GROUP BY dd.log_date
+    """, nativeQuery = true)
+    List<DayCountView> findDietItemCountsGroupedByDate(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
 }
