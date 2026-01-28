@@ -5,6 +5,10 @@ import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminPtRoomForceCl
 import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminPtRoomListResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
+import com.hcproj.healthcareprojectbackend.community.entity.ReportEntity;
+import com.hcproj.healthcareprojectbackend.community.entity.ReportStatus;
+import com.hcproj.healthcareprojectbackend.community.entity.ReportType;
+import com.hcproj.healthcareprojectbackend.community.repository.ReportRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomEntity;
@@ -31,6 +35,7 @@ public class AdminPtRoomService {
 
     private final PtRoomRepository ptRoomRepository;
     private final UserRepository userRepository;
+    private final ReportRepository reportRepository;
 
     /**
      * 관리자 화상 PT 방 목록 조회
@@ -161,6 +166,16 @@ public class AdminPtRoomService {
 
         // 3) 강제 종료 처리
         room.forceClose();
+
+        List<ReportEntity> pendingReports = reportRepository.findByTargetIdAndTypeAndStatus(
+                ptRoomId,
+                ReportType.PT_ROOM, // ★ 타입 주의: 화상 PT이므로 PT_ROOM 사용
+                ReportStatus.PENDING
+        );
+
+        for (ReportEntity report : pendingReports) {
+            report.process(); // 신고 상태를 PROCESSED로 변경
+        }
 
         // 4) 저장
         PtRoomEntity savedRoom = ptRoomRepository.save(room);
