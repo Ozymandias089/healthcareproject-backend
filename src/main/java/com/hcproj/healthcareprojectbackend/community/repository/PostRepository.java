@@ -31,7 +31,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
     // ========================================================================
 
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " + // [핵심 수정]
+            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " +
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
             "AND p.status = :status " +
             "ORDER BY p.postId DESC")
@@ -42,10 +42,11 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             Pageable pageable
     );
 
+    // 2. 제목 검색 (띄어쓰기 무시 로직 적용)
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " + // [핵심 수정]
+            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " +
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND p.title LIKE :q " +
+            "AND REPLACE(p.title, ' ', '') LIKE REPLACE(:q, ' ', '') " +
             "AND p.status = :status " +
             "ORDER BY p.postId DESC")
     List<PostEntity> searchByTitle(
@@ -56,9 +57,9 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             Pageable pageable
     );
 
-    // [수정 3] 작성자 검색 (CONCAT 제거 -> LIKE :q)
+    // 3. 작성자 검색
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " + // IS NULL 추가
+            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " +
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
             "AND p.userId IN (SELECT u.id FROM UserEntity u WHERE u.nickname LIKE :q) " +
             "AND p.status = :status " +
@@ -67,7 +68,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             @Param("cursorId") Long cursorId,
             @Param("category") String category,
             @Param("q") String q,
-            @Param("status") PostStatus status, // 여기도 추가!
+            @Param("status") PostStatus status,
             Pageable pageable
     );
 
