@@ -1,6 +1,8 @@
 package com.hcproj.healthcareprojectbackend.pt.entity;
 
 import com.hcproj.healthcareprojectbackend.global.entity.BaseTimeEntity;
+import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
+import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -73,64 +75,86 @@ public class PtRoomEntity extends BaseTimeEntity {
     @Column(name = "status", nullable = false, length = 20)
     private PtRoomStatus status; // SCHEDULED | JOINED | LEFT | KICKED
 
-    /**
-     * PT 방을 라이브 상태로 시작 처리한다.
-     *
-     * <p>
-     * 이미 LIVE인 경우 아무 동작도 하지 않는다(멱등성).
-     * startedAt이 비어있으면 현재 시각으로 기록한다.
-     * </p>
-     */
+    // ---------------------------
+    // Domain Actions (이름 유지)
+    // ---------------------------
+
     public void start() {
         if (this.status == PtRoomStatus.LIVE) {
-            return;
+            return; // 멱등
         }
+        ensureStartable();
+
         this.status = PtRoomStatus.LIVE;
         if (this.startedAt == null) {
             this.startedAt = Instant.now();
         }
     }
 
-    /**
-     * PT 방을 정상 종료 처리한다.
-     *
-     * <p>
-     * status를 ENDED로 변경하고 소프트 삭제 마킹한다.
-     * 이미 ENDED인 경우 아무 동작도 하지 않는다(멱등성).
-     * </p>
-     */
     public void end() {
         if (this.status == PtRoomStatus.ENDED) {
-            return;
+            return; // 멱등
         }
+        ensureEndable();
+
         this.status = PtRoomStatus.ENDED;
         markDeleted();
     }
 
-    /**
-     * PT 방을 취소 처리한다.
-     *
-     * <p>
-     * status를 CANCELLED로 변경하고 소프트 삭제 마킹한다.
-     * </p>
-     */
     public void cancel() {
-        if (this.status == PtRoomStatus.CANCELLED) return;
+        if (this.status == PtRoomStatus.CANCELLED) {
+            return; // 멱등
+        }
+        ensureCancellable();
+
         this.status = PtRoomStatus.CANCELLED;
         markDeleted();
     }
 
-    /**
-     * 관리자에 의한 PT 방 강제 종료 처리한다.
-     *
-     * <p>
-     * status를 FORCE_CLOSED로 변경하고 소프트 삭제 마킹한다.
-     * </p>
-     */
     public void forceClose() {
-        if (this.status == PtRoomStatus.FORCE_CLOSED) return;
+        if (this.status == PtRoomStatus.FORCE_CLOSED) {
+            return; // 멱등
+        }
+        ensureForceClosable();
+
         this.status = PtRoomStatus.FORCE_CLOSED;
         markDeleted();
     }
 
+
+    // ---------------------------
+    // Guards (전이 규칙을 도메인에)
+    // ---------------------------
+
+    private void ensureStartable() {
+        // 예: 예약방/라이브방 정책이 있다면 여기서 같이 체크 가능
+        // if (this.roomType == PtRoomType.RESERVED && this.scheduledStartAt == null) throw ...
+
+        // 서비스에서 하던 "SCHEDULED만 LIVE로"를 도메인으로 이동
+        if (this.status != PtRoomStatus.SCHEDULED) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+    }
+
+    private void ensureEndable() {
+        if (this.status != PtRoomStatus.LIVE) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+    }
+
+    private void ensureCancellable() {
+        // 취소 가능 범위를 네 정책대로 정하면 됨
+        // 보통: SCHEDULED만 취소 허용(이미 LIVE면 cancel 대신 end)
+        if (this.status != PtRoomStatus.SCHEDULED) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+    }
+
+    private void ensureForceClosable() {
+        // 관리자 강제 종료 정책: LIVE/ SCHEDULED 둘 다 허용 등
+        // 여기서는 예시로 LIVE, SCHEDULED만 허용
+        if (this.status != PtRoomStatus.LIVE && this.status != PtRoomStatus.SCHEDULED) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+    }
 }
