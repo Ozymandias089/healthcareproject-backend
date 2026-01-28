@@ -57,9 +57,6 @@ public class WorkoutDayService {
                 .stream()
                 .collect(Collectors.toMap(ExerciseEntity::getExerciseId, e -> e));
 
-        // 4. 총 시간 계산 (세트 * 휴식시간 기반 추정)
-        int totalMinutes = calculateTotalMinutes(workoutItems);
-
         // 5. 완료 개수 계산
         int completedCount = (int) workoutItems.stream()
                 .filter(item -> Boolean.TRUE.equals(item.getIsChecked()))
@@ -89,33 +86,13 @@ public class WorkoutDayService {
                 .date(date.toString())
                 .workoutDayId(workoutDay.getWorkoutDayId())
                 .title(workoutDay.getTitle())
-                .totalMinutes(totalMinutes)
+                .totalMinutes(workoutDay.getTotalMinutes())
                 .exerciseCount(workoutItems.size())
                 .completedCount(completedCount)
                 .items(itemDTOs)
                 .build();
     }
 
-    /**
-     * 총 운동 시간 계산 (추정값)
-     * - 각 운동당 (세트 수 * 1분) + (세트 수 * 휴식시간/60)
-     */
-    private int calculateTotalMinutes(List<WorkoutItemEntity> items) {
-        int totalSeconds = 0;
-
-        for (WorkoutItemEntity item : items) {
-            int sets = (item.getSets() != null) ? item.getSets() : 1;
-            int restSeconds = (item.getRestSecond() != null) ? item.getRestSecond() : 0;
-
-            // 세트당 약 60초 운동 + 휴식시간
-            int exerciseSeconds = sets * 60;
-            int restTotalSeconds = (sets - 1) * restSeconds; // 마지막 세트 후에는 휴식 없음
-
-            totalSeconds += exerciseSeconds + restTotalSeconds;
-        }
-
-        return (int) Math.ceil(totalSeconds / 60.0);
-    }
     /**
      * 운동 항목 체크 상태 업데이트
      *
