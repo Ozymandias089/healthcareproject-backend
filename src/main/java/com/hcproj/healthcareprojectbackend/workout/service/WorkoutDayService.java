@@ -72,9 +72,8 @@ public class WorkoutDayService {
                             .workoutItemId(item.getWorkoutItemId())
                             .exerciseId(item.getExerciseId())
                             .name(exerciseName)
-                            .quantity(item.getReps())
-                            .sets(item.getSets())
                             .restSeconds(item.getRestSecond())
+                            .amount(item.getAmount())
                             .isChecked(item.getIsChecked())
                             .sortOrder(item.getSortOrder())
                             .build();

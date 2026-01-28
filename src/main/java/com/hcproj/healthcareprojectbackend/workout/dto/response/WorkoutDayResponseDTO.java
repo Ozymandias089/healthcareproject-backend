@@ -19,9 +19,8 @@ public record WorkoutDayResponseDTO(
             Long workoutItemId,
             Long exerciseId,
             String name,
-            Integer quantity,
-            Integer sets,
             Integer restSeconds,
+            String amount,
             Boolean isChecked,
             Integer sortOrder
     ) {}
