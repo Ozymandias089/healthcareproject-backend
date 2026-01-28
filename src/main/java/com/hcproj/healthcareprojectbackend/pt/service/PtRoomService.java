@@ -108,6 +108,10 @@ public class PtRoomService {
             return;
         }
 
+        if (existing != null && existing.getStatus() == PtParticipantStatus.KICKED) {
+            throw new BusinessException(ErrorCode.KICKED_USER);
+        }
+
         // ✅ 정원 체크 (락 잡힌 상태에서)
         long joinedCount = ptRoomParticipantRepository.countByPtRoomIdAndStatus(ptRoomId, PtParticipantStatus.JOINED);
         Integer max = room.getMaxParticipants();

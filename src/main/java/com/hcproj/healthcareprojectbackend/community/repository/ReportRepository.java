@@ -43,4 +43,6 @@ public interface ReportRepository extends JpaRepository<ReportEntity, Long> {
      * @return 이미 신고가 존재하면 true
      */
     boolean existsByReporterIdAndTargetIdAndType(Long reporterId, Long targetId, ReportType type);
+
+    List<ReportEntity> findByTargetIdAndTypeAndStatus(Long targetId, ReportType type, ReportStatus status);
 }

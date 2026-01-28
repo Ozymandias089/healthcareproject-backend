@@ -72,4 +72,14 @@ public class AdminBoardController {
         adminBoardService.restorePost(postId);
         return ApiResponse.ok(new MessageResponseDTO("POST_RESTORED"));
     }
+    /**
+     * 게시글 삭제 API (관리자용)
+     * DELETE /api/admin/board/post/{postId}
+     */
+    @AdminOnly
+    @DeleteMapping("/post/{postId}")
+    public ApiResponse<MessageResponseDTO> deletePost(@PathVariable Long postId) {
+        adminBoardService.deletePost(postId);
+        return ApiResponse.ok(new MessageResponseDTO("POST_DELETED"));
+    }
 }

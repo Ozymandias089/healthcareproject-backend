@@ -26,68 +26,62 @@ import java.util.List;
  * </p>
  */
 public interface PostRepository extends JpaRepository<PostEntity, Long> {
-
-    /**
-     * 공지사항 목록을 조회한다.
-     *
-     * @param status 조회할 게시글 상태(예: POSTED)
-     * @return 공지글 목록 (postId 내림차순)
-     */
-    List<PostEntity> findByIsNoticeTrueAndStatusOrderByPostIdDesc(PostStatus status);
-
     // ========================================================================
     //  커서 기반 페이징 (User Side) - 검색 조건별 메서드 분리
     // ========================================================================
 
-    // 1. 기본 목록 조회
     @Query("SELECT p FROM PostEntity p " +
             "WHERE (:category = 'ALL' OR p.category = :category) " +
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND p.status = 'POSTED' " +
+            "AND p.status = :status " +
             "ORDER BY p.postId DESC")
-    List<PostEntity> findPostList(@Param("cursorId") Long cursorId, @Param("category") String category, Pageable pageable);
+    List<PostEntity> findPostList(
+            @Param("cursorId") Long cursorId,
+            @Param("category") String category,
+            @Param("status") PostStatus status, // 여기가 추가되어야 합니다!
+            Pageable pageable
+    );
 
-    // 2. [제목 검색] (CONCAT 적용 완료)
+    // [수정 2] 제목 검색 (CONCAT 제거 -> LIKE :q)
     @Query("SELECT p FROM PostEntity p " +
             "WHERE (:category = 'ALL' OR p.category = :category) " +
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND p.title LIKE CONCAT('%', :q, '%') " +  // 제목에 포함된 것 검색
-            "AND p.status = 'POSTED' " +
+            "AND p.title LIKE :q " +  // Service에서 "%검색어%" 형태로 넘김
+            "AND p.status = :status " +
             "ORDER BY p.postId DESC")
-    List<PostEntity> searchByTitle(@Param("cursorId") Long cursorId, @Param("category") String category, @Param("q") String q, Pageable pageable);
+    List<PostEntity> searchByTitle(
+            @Param("cursorId") Long cursorId,
+            @Param("category") String category,
+            @Param("q") String q,
+            @Param("status") PostStatus status, // 여기도 추가!
+            Pageable pageable
+    );
 
-    // 3. [닉네임 검색] (작성자 닉네임 서브쿼리 + CONCAT 적용 완료)
+    // [수정 3] 작성자 검색 (CONCAT 제거 -> LIKE :q)
     @Query("SELECT p FROM PostEntity p " +
             "WHERE (:category = 'ALL' OR p.category = :category) " +
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND p.userId IN (SELECT u.id FROM UserEntity u WHERE u.nickname LIKE CONCAT('%', :q, '%')) " + // 닉네임 검색
-            "AND p.status = 'POSTED' " +
+            "AND p.userId IN (SELECT u.id FROM UserEntity u WHERE u.nickname LIKE :q) " + // Service에서 "%검색어%"
+            "AND p.status = :status " +
             "ORDER BY p.postId DESC")
-    List<PostEntity> searchByAuthor(@Param("cursorId") Long cursorId, @Param("category") String category, @Param("q") String q, Pageable pageable);
+    List<PostEntity> searchByAuthor(
+            @Param("cursorId") Long cursorId,
+            @Param("category") String category,
+            @Param("q") String q,
+            @Param("status") PostStatus status, // 여기도 추가!
+            Pageable pageable
+    );
 
-    // ========================================================================
-    //  관리자 / 통계 (Admin Side)
-    // ========================================================================
+    // --- 아래는 관리자 기능 (기존 유지하되 CONCAT 문제 방지 위해 LIKE :keyword 사용 권장) ---
 
-    /** 상태별 게시글 수를 반환한다(관리자 통계용). */
     long countByStatus(PostStatus status);
-
-    /** 특정 시각 이후 작성된 게시글 수를 반환한다(관리자 통계용). */
     long countByCreatedAtAfter(Instant startOfDay);
 
-    /**
-     * 관리자용 게시글 목록 조회 (페이지네이션 + 필터링).
-     *
-     * <p>
-     * category/status/keyword 조건이 모두 선택적으로 적용된다.
-     * keyword는 제목 또는 작성자 닉네임에 대해 LIKE 검색한다.
-     * </p>
-     */
     @Query("SELECT p FROM PostEntity p " +
             "LEFT JOIN UserEntity u ON p.userId = u.id " +
             "WHERE (:category IS NULL OR p.category = :category) " +
             "AND (:status IS NULL OR p.status = :status) " +
-            "AND (:keyword IS NULL OR p.title LIKE %:keyword% OR u.nickname LIKE %:keyword%) " +
+            "AND (:keyword IS NULL OR p.title LIKE :keyword OR u.nickname LIKE :keyword) " +
             "ORDER BY p.postId DESC")
     Page<PostEntity> findAdminPostList(
             @Param("category") String category,
@@ -96,14 +90,11 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             Pageable pageable
     );
 
-    /**
-     * 관리자용 게시글 전체 개수 조회 (필터링 적용).
-     */
     @Query("SELECT COUNT(p) FROM PostEntity p " +
             "LEFT JOIN UserEntity u ON p.userId = u.id " +
             "WHERE (:category IS NULL OR p.category = :category) " +
             "AND (:status IS NULL OR p.status = :status) " +
-            "AND (:keyword IS NULL OR p.title LIKE %:keyword% OR u.nickname LIKE %:keyword%)")
+            "AND (:keyword IS NULL OR p.title LIKE :keyword OR u.nickname LIKE :keyword)")
     long countAdminPostList(
             @Param("category") String category,
             @Param("status") PostStatus status,
