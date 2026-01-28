@@ -31,7 +31,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
     // ========================================================================
 
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " + // [수정] IS NULL 추가
+            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " + // [핵심 수정]
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
             "AND p.status = :status " +
             "ORDER BY p.postId DESC")
@@ -42,26 +42,25 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             Pageable pageable
     );
 
-    // [수정 2] 제목 검색 (CONCAT 제거 -> LIKE :q)
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:category = 'ALL' OR p.category = :category) " +
+            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " + // [핵심 수정]
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND p.title LIKE :q " +  // Service에서 "%검색어%" 형태로 넘김
+            "AND p.title LIKE :q " +
             "AND p.status = :status " +
             "ORDER BY p.postId DESC")
     List<PostEntity> searchByTitle(
             @Param("cursorId") Long cursorId,
             @Param("category") String category,
             @Param("q") String q,
-            @Param("status") PostStatus status, // 여기도 추가!
+            @Param("status") PostStatus status,
             Pageable pageable
     );
 
     // [수정 3] 작성자 검색 (CONCAT 제거 -> LIKE :q)
     @Query("SELECT p FROM PostEntity p " +
-            "WHERE (:category = 'ALL' OR p.category = :category) " +
+            "WHERE (:category IS NULL OR :category = 'ALL' OR p.category = :category) " + // IS NULL 추가
             "AND (:cursorId IS NULL OR p.postId < :cursorId) " +
-            "AND p.userId IN (SELECT u.id FROM UserEntity u WHERE u.nickname LIKE :q) " + // Service에서 "%검색어%"
+            "AND p.userId IN (SELECT u.id FROM UserEntity u WHERE u.nickname LIKE :q) " +
             "AND p.status = :status " +
             "ORDER BY p.postId DESC")
     List<PostEntity> searchByAuthor(
