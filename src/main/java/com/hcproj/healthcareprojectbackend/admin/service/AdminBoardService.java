@@ -5,9 +5,9 @@ import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminPostListRespo
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostResponseDTO;
-import com.hcproj.healthcareprojectbackend.community.entity.PostEntity;
-import com.hcproj.healthcareprojectbackend.community.entity.PostStatus;
+import com.hcproj.healthcareprojectbackend.community.entity.*;
 import com.hcproj.healthcareprojectbackend.community.repository.PostRepository;
+import com.hcproj.healthcareprojectbackend.community.repository.ReportRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -31,16 +31,10 @@ public class AdminBoardService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final ReportRepository reportRepository;
 
     /**
      * 관리자 게시판 통합 조회
-     *
-     * @param page     페이지 번호 (0부터 시작)
-     * @param size     한 페이지당 개수
-     * @param category 카테고리 필터 (null이면 전체)
-     * @param status   게시글 상태 필터 (null이면 전체)
-     * @param keyword  검색어 (제목 또는 작성자)
-     * @return 게시글 목록 응답 DTO
      */
     @Transactional(readOnly = true)
     public AdminPostListResponseDTO getAdminPostList(
@@ -59,25 +53,27 @@ public class AdminBoardService {
             try {
                 statusParam = PostStatus.valueOf(status.toUpperCase());
             } catch (IllegalArgumentException e) {
-                // 잘못된 status 값은 무시하고 전체 조회
                 statusParam = null;
             }
         }
 
-        String keywordParam = (keyword == null || keyword.isBlank()) ? null : keyword;
+        // ★ [수정됨] Repository의 LIKE :keyword 대응을 위해 앞뒤에 % 추가
+        String keywordParam = (keyword == null || keyword.isBlank())
+                ? null
+                : "%" + keyword + "%";
 
         // 2) 페이지네이션 설정
         Pageable pageable = PageRequest.of(page, size);
 
-        // 3) 게시글 조회
+        // 3) 게시글 조회 (수정된 keywordParam 전달)
         Page<PostEntity> postPage = postRepository.findAdminPostList(
                 categoryParam, statusParam, keywordParam, pageable
         );
 
-        // 4) 전체 개수 조회
+        // 4) 전체 개수 조회 (수정된 keywordParam 전달)
         long total = postRepository.countAdminPostList(categoryParam, statusParam, keywordParam);
 
-        // 5) 작성자 정보 조회 (N+1 방지를 위해 한 번에 조회)
+        // 5) 작성자 정보 조회 (N+1 방지)
         List<Long> userIds = postPage.getContent().stream()
                 .map(PostEntity::getUserId)
                 .distinct()
@@ -116,18 +112,12 @@ public class AdminBoardService {
 
     /**
      * 공지사항 등록
-     *
-     * @param adminUserId 관리자 사용자 ID
-     * @param request     공지사항 등록 요청 DTO
-     * @return 생성된 게시글 응답 DTO
      */
     @Transactional
     public PostResponseDTO createNotice(Long adminUserId, AdminNoticeCreateRequestDTO request) {
-        // 1) 관리자 사용자 조회
         UserEntity adminUser = userRepository.findById(adminUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 2) 게시글 엔티티 생성
         PostEntity post = PostEntity.builder()
                 .userId(adminUserId)
                 .category(request.category().toUpperCase())
@@ -138,10 +128,8 @@ public class AdminBoardService {
                 .viewCount(0L)
                 .build();
 
-        // 3) 저장
         PostEntity savedPost = postRepository.save(post);
 
-        // 4) 응답 DTO 반환
         return PostResponseDTO.builder()
                 .postId(savedPost.getPostId())
                 .author(new PostResponseDTO.AuthorDTO(adminUser.getNickname(), adminUser.getHandle()))
@@ -159,18 +147,37 @@ public class AdminBoardService {
                 .build();
     }
 
+    /**
+     * 게시글 복구 (Soft Delete 해제)
+     */
     @Transactional
     public void restorePost(Long postId) {
-        // 1. 게시글 조회 (삭제된 글도 찾을 수 있어야 함)
         PostEntity post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
-        // 2. 이미 게시중(POSTED)인 경우 멱등성 처리
         if (post.getStatus() == PostStatus.POSTED) {
             return;
         }
 
-        // 3. 복구 로직 수행
         post.restore();
+    }
+    @Transactional
+    public void deletePost(Long postId) {
+        PostEntity post = postRepository.findById(postId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+        // 1. 게시글 삭제 (Soft Delete)
+        post.delete();
+
+        // 2. 관련 신고 자동 처리 (PostService와 동일한 로직)
+        List<ReportEntity> pendingReports = reportRepository.findByTargetIdAndTypeAndStatus(
+                postId,
+                ReportType.POST,
+                ReportStatus.PENDING
+        );
+
+        for (ReportEntity report : pendingReports) {
+            report.process(); // 신고 상태를 PROCESSED로 변경
+        }
     }
 }

@@ -148,6 +148,7 @@ public enum ErrorCode {
     CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "PT-005", "진행 중이거나 종료된 방의 예약은 취소할 수 없습니다"),
     NOT_JOINED(HttpStatus.CONFLICT, "PT-006", "해당 사용자는 현재 방에 참여 중이 아닙니다"),
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "PT-007", "존재하지 않는 방입니다."),
+    KICKED_USER(HttpStatus.FORBIDDEN, "KICKED", "강퇴된 방에는 다시 입장할 수 없습니다."),
 
     // -------------------------
     // Exercise

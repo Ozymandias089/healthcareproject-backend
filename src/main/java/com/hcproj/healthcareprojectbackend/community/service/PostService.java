@@ -8,10 +8,10 @@ import com.hcproj.healthcareprojectbackend.community.dto.response.PostDetailResp
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostListResponseDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostResponseDTO; // [수정] Import 추가
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostSummaryDto;
-import com.hcproj.healthcareprojectbackend.community.entity.PostEntity;
-import com.hcproj.healthcareprojectbackend.community.entity.PostStatus;
+import com.hcproj.healthcareprojectbackend.community.entity.*;
 import com.hcproj.healthcareprojectbackend.community.repository.CommentRepository; // [수정] Import 추가
 import com.hcproj.healthcareprojectbackend.community.repository.PostRepository;
+import com.hcproj.healthcareprojectbackend.community.repository.ReportRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +38,7 @@ public class PostService {
     // [수정] 댓글 조회 기능을 위해 의존성 주입 추가
     private final CommentService commentService;
     private final CommentRepository commentRepository;
+    private final ReportRepository reportRepository;
 
     @Transactional // [수정] 쓰기 작업이므로 트랜잭션 허용 (readOnly = false)
     public void createPost(Long userId, PostCreateRequestDTO request) {
@@ -64,19 +65,21 @@ public class PostService {
         List<PostEntity> entities;
 
         if (q == null || q.isBlank()) {
-            entities = postRepository.findPostList(cursorId, category, pageable);
+            entities = postRepository.findPostList(cursorId, category, PostStatus.POSTED, pageable);
         } else {
-            String type = (searchBy == null) ? "TITLE" : searchBy.toUpperCase();
+            // ★ 수정됨: 자바에서 미리 앞뒤로 %를 붙여줍니다.
+            String searchPattern = "%" + q + "%";
 
+            String type = (searchBy == null) ? "TITLE" : searchBy.toUpperCase();
             switch (type) {
                 case "NICKNAME", "AUTHOR" ->
-                        entities = postRepository.searchByAuthor(cursorId, category, q, pageable);
-
+                    // searchPattern을 넘김
+                        entities = postRepository.searchByAuthor(cursorId, category, searchPattern, PostStatus.POSTED, pageable);
                 case "TITLE" ->
-                        entities = postRepository.searchByTitle(cursorId, category, q, pageable);
-
+                    // searchPattern을 넘김
+                        entities = postRepository.searchByTitle(cursorId, category, searchPattern, PostStatus.POSTED, pageable);
                 default ->
-                        entities = postRepository.searchByTitle(cursorId, category, q, pageable);
+                        entities = postRepository.searchByTitle(cursorId, category, searchPattern, PostStatus.POSTED, pageable);
             }
         }
 
@@ -199,5 +202,14 @@ public class PostService {
         }
 
         post.delete();
+        List<ReportEntity> pendingReports = reportRepository.findByTargetIdAndTypeAndStatus(
+                postId,
+                ReportType.POST,
+                ReportStatus.PENDING
+        );
+
+        for (ReportEntity report : pendingReports) {
+            report.process(); // 상태를 PROCESSED로 변경
+        }
     }
 }
