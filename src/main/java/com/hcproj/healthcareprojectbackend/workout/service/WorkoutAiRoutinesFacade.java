@@ -54,7 +54,7 @@ public class WorkoutAiRoutinesFacade {
         }
 
         // 3) 기존 해당 날짜들만 삭제(Replace)
-        deleteExisting(userId, targetDates);
+        deleteExistingInWindow(userId, startDate, endDate);
 
         // 4) AI 호출 (allowedExercises whitelist 포함)
         WorkoutAiService.Generated generated = workoutAiService.generate(targetDates, req.additionalRequest());
@@ -73,16 +73,21 @@ public class WorkoutAiRoutinesFacade {
         return buildResponse(targetDates, ai, persisted);
     }
 
-    private void deleteExisting(Long userId, List<LocalDate> targetDates) {
-        List<WorkoutDayEntity> existing = workoutDayRepository.findByUserIdAndLogDateIn(userId, targetDates);
+    private void deleteExistingInWindow(Long userId, LocalDate startDate, LocalDate endDate) {
+        List<WorkoutDayEntity> existing = workoutDayRepository
+                .findByUserIdAndLogDateBetween(userId, startDate, endDate);
+
         if (existing.isEmpty()) return;
 
         List<Long> dayIds = existing.stream()
                 .map(WorkoutDayEntity::getWorkoutDayId)
                 .toList();
 
-        // 기존 항목만 삭제 (Day는 유지하고 persist에서 title 갱신 + item 재삽입)
+        // 1) items 삭제
         workoutItemRepository.deleteByWorkoutDayIdIn(dayIds);
+
+        // 2) days도 삭제 (권장: "목금월화만 남는다"를 보장)
+        workoutDayRepository.deleteAllByIdInBatch(dayIds);
     }
 
     private void validateAiOutput(List<LocalDate> targetDates, WorkoutAiRoutineResult ai, Set<Long> allowedIds) {
@@ -149,12 +154,6 @@ public class WorkoutAiRoutinesFacade {
         // 3) 날짜 -> dayId 매핑
         Map<LocalDate, Long> dateToDayId = savedDays.stream()
                 .collect(Collectors.toMap(WorkoutDayEntity::getLogDate, WorkoutDayEntity::getWorkoutDayId));
-
-        // 4) 해당 day들의 item 전부 삭제(덮어쓰기)
-        List<Long> dayIds = savedDays.stream()
-                .map(WorkoutDayEntity::getWorkoutDayId)
-                .toList();
-        workoutItemRepository.deleteByWorkoutDayIdIn(dayIds);
 
         // 5) item 재삽입
         List<WorkoutItemEntity> itemEntities = new ArrayList<>();
