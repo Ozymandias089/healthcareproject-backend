@@ -90,12 +90,14 @@ public class DietDayService {
                                         .carbs(food != null ? food.getCarbs() : null)
                                         .proteins(food != null ? food.getProtein() : null)
                                         .fats(food != null ? food.getFat() : null)
+                                        .isChecked(food != null ? item.getIsChecked() : false)
                                         .build();
                             })
                             .toList();
 
                     return DietDayResponseDTO.MealDTO.builder()
                             .dietMealId(meal.getDietMealId())
+                            .title(meal.getTitle())
                             .sortOrder(meal.getSortOrder())
                             .items(itemDTOs)
                             .build();

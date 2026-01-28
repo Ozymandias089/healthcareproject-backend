@@ -15,6 +15,7 @@ public record DietDayResponseDTO(
     @Builder
     public record MealDTO(
             Long dietMealId,
+            String title,
             Integer sortOrder,
             List<MealItemDTO> items
     ) {}
@@ -27,6 +28,7 @@ public record DietDayResponseDTO(
             Integer calories,
             BigDecimal carbs,
             BigDecimal proteins,
-            BigDecimal fats
+            BigDecimal fats,
+            boolean isChecked
     ) {}
 }
