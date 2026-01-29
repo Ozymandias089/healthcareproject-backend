@@ -36,6 +36,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     /** 핸들로 사용자를 조회한다. */
     Optional<UserEntity> findByHandle(String handle);
 
+    boolean existsByRole(UserRole role);
+
     /**
      * 특정 시각 이후 가입(생성)된 사용자 수를 반환한다.
      *

@@ -156,6 +156,28 @@ public class UserEntity extends BaseTimeEntity {
                 .build();
     }
 
+    public static UserEntity registerAdmin(
+            String email,
+            String handle,
+            String passwordHash,
+            String nickname,
+            String profileImageUrl
+    ){
+        validatePrecondition(email, handle, nickname);
+        if (passwordHash == null || passwordHash.isBlank()) throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+
+        return UserEntity.builder()
+                .email(email)
+                .handle(handle)
+                .passwordHash(passwordHash)
+                .nickname(nickname)
+                .role(UserRole.ADMIN)
+                .status(UserStatus.ACTIVE)
+                .profileImageUrl(profileImageUrl)
+                .emailVerified(true)
+                .build();
+    }
+
     /**
      * 신규 사용자 핸들을 생성한다.
      *
