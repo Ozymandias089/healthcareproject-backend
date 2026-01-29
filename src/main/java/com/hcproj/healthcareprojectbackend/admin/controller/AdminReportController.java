@@ -1,6 +1,7 @@
 package com.hcproj.healthcareprojectbackend.admin.controller;
 
 import com.hcproj.healthcareprojectbackend.admin.dto.request.ReportStatusUpdateRequestDTO;
+import com.hcproj.healthcareprojectbackend.admin.dto.response.Admincommentdetailresponsedto;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminReportListResponseDTO;
 import com.hcproj.healthcareprojectbackend.admin.service.AdminReportService;
 import com.hcproj.healthcareprojectbackend.global.response.ApiResponse;
@@ -37,5 +38,14 @@ public class AdminReportController {
     ) {
         adminReportService.updateReportStatus(reportId, request);
         return ApiResponse.ok(new MessageResponseDTO("REPORT_STATUS_UPDATED"));
+    }
+
+    // 댓글 상세 조회 (신고된 댓글 확인용)
+    @AdminOnly
+    @GetMapping("/comments/{commentId}")
+    public ApiResponse<Admincommentdetailresponsedto> getCommentDetail(
+            @PathVariable Long commentId
+    ) {
+        return ApiResponse.ok(adminReportService.getCommentDetail(commentId));
     }
 }
