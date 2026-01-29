@@ -4,23 +4,21 @@
 TRUNCATE TABLE posts;
 TRUNCATE TABLE exercises;
 TRUNCATE TABLE foods;
-TRUNCATE TABLE users;
 
-ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1;
 ALTER TABLE exercises ALTER COLUMN exercise_id RESTART WITH 1;
 ALTER TABLE foods ALTER COLUMN food_id RESTART WITH 1;
 ALTER TABLE posts ALTER COLUMN post_id RESTART WITH 1;
 
 -- =========================
--- USERS (dev seed)
+-- USERS (dev seed) - idempotent
 -- =========================
-INSERT INTO users
-(email, handle, password_hash, nickname, phone_number, role, status, profile_image_url, email_verified, created_at, updated_at, deleted_at)
-VALUES
-    ('user1@test.com', 'user1', '$2a$10$devdevdevdevdevdevdevdevdevdevdevdevdev', '유저1', '010-0000-0001', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL),
-    ('user2@test.com', 'user2', '$2a$10$devdevdevdevdevdevdevdevdevdevdevdevdev', '유저2', '010-0000-0002', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL),
-    ('user3@test.com', 'user3', '$2a$10$devdevdevdevdevdevdevdevdevdevdevdevdev', '유저3', '010-0000-0003', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL),
-    ('admin@test.com', 'admin', '$2a$10$devdevdevdevdevdevdevdevdevdevdevdevdev', '관리자', '010-0000-0004', 'ADMIN', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL);
+MERGE INTO users
+    (email, handle, password_hash, nickname, phone_number, role, status, profile_image_url, email_verified, created_at, updated_at, deleted_at)
+    KEY(email)
+    VALUES
+    ('user1@test.com', 'user1', '$2a$10$dev...', '유저1', '010-0000-0001', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL),
+    ('user2@test.com', 'user2', '$2a$10$dev...', '유저2', '010-0000-0002', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL),
+    ('user3@test.com', 'user3', '$2a$10$dev...', '유저3', '010-0000-0003', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL);
 
 -- =========================
 -- EXERCISES
@@ -86,24 +84,20 @@ VALUES
     (30, '오렌지', 47, 11.8, 0.9, 0.1, 100, 'g', '1개', TRUE, NULL, 'https://images.unsplash.com/photo-1547514701-42782101795e?w=300', NOW(), NOW(), NULL);
 
 -- =========================
--- POSTS
+-- POSTS (no hard-coded user_id)
 -- =========================
-INSERT INTO POSTS
-(TITLE, CONTENT, CATEGORY, USER_ID, IS_NOTICE, VIEW_COUNT, STATUS, CREATED_AT)
-VALUES
-    ('테스트 게시글 1', '테스트 내용입니다 1', 'FREE', 2, FALSE, 11, 'POSTED', NOW()),
-    ('테스트 게시글 2', '테스트 내용입니다 2', 'FREE', 3, FALSE, 12, 'POSTED', NOW()),
-    ('테스트 게시글 3', '테스트 내용입니다 3', 'QUESTION', 4, FALSE, 14, 'POSTED', NOW()),
-    ('테스트 게시글 4', '테스트 내용입니다 4', 'QUESTION', 1, FALSE, 5, 'POSTED', NOW()),
-    ('테스트 게시글 5', '테스트 내용입니다 5', 'INFO', 1, FALSE, 7, 'POSTED', NOW()),
-    ('테스트 게시글 6', '테스트 내용입니다 6', 'FREE', 1, FALSE, 15, 'POSTED', NOW()),
-    ('테스트 게시글 7', '테스트 내용입니다 7', 'FREE', 1, FALSE, 241, 'POSTED', NOW()),
-    ('테스트 게시글 8', '테스트 내용입니다 8', 'QUESTION', 1, FALSE, 2, 'POSTED', NOW()),
-    ('테스트 게시글 9', '테스트 내용입니다 9', 'INFO', 1, FALSE, 1, 'POSTED', NOW()),
-    ('테스트 게시글 10', '테스트 내용입니다 10', 'FREE', 1, FALSE, 0, 'POSTED', NOW()),
-    ('테스트 게시글 11', '테스트 내용입니다 11', 'FREE', 1, FALSE, 0, 'POSTED', NOW()),
-    ('테스트 게시글 12', '테스트 내용입니다 12', 'QUESTION', 1, FALSE, 0, 'POSTED', NOW()),
-    ('테스트 게시글 13', '테스트 내용입니다 13', 'INFO', 1, FALSE, 11, 'POSTED', NOW()),
-    ('테스트 게시글 14', '테스트 내용입니다 14', 'FREE', 1, FALSE, 123, 'POSTED', NOW()),
-    ('공지사항 테스트', '공지사항 내용입니다', 'INFO', 1, TRUE, 0, 'POSTED', NOW());
+INSERT INTO posts (title, content, category, user_id, is_notice, view_count, status, created_at)
+SELECT '테스트 게시글 1', '테스트 내용입니다 1', 'FREE', u.user_id, FALSE, 11, 'POSTED', NOW()
+FROM users u WHERE u.handle = 'user2';
 
+INSERT INTO posts (title, content, category, user_id, is_notice, view_count, status, created_at)
+SELECT '테스트 게시글 2', '테스트 내용입니다 2', 'FREE', u.user_id, FALSE, 12, 'POSTED', NOW()
+FROM users u WHERE u.handle = 'user3';
+
+INSERT INTO posts (title, content, category, user_id, is_notice, view_count, status, created_at)
+SELECT '테스트 게시글 3', '테스트 내용입니다 3', 'QUESTION', u.user_id, FALSE, 14, 'POSTED', NOW()
+FROM users u WHERE u.handle = 'admin';
+
+INSERT INTO posts (title, content, category, user_id, is_notice, view_count, status, created_at)
+SELECT '공지사항 테스트', '공지사항 내용입니다', 'INFO', u.user_id, TRUE, 0, 'POSTED', NOW()
+FROM users u WHERE u.handle = 'admin';
