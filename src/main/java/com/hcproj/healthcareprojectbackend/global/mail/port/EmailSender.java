@@ -26,5 +26,16 @@ public interface EmailSender {
      * @param subject  메일 제목
      * @param textBody 메일 본문 (Plain Text)
      */
-    void send(String to, String subject, String textBody);
+    void sendText(String to, String subject, String textBody);
+
+    void sendHtml(String to, String subject, String htmlBody);
+
+    /**
+     * (선택) HTML + 텍스트 fallback을 함께 보내고 싶을 때.
+     * 메일 호환성/스팸필터에 유리.
+     */
+    default void sendHtml(String to, String subject, String textFallback, String htmlBody) {
+        // 기본 구현: 구현체가 오버라이드 가능
+        sendHtml(to, subject, htmlBody);
+    }
 }
