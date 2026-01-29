@@ -17,40 +17,15 @@ import java.util.Optional;
 
 /**
  * PT 방({@link PtRoomEntity})에 대한 영속성 접근 인터페이스.
- *
- * <p><b>주요 기능</b></p>
- * <ul>
- * <li>상태별 카운트(대시보드)</li>
- * <li>커서 기반 목록 조회 + 다양한 필터(트레이너 검색 포함)</li>
- * <li>동시성 제어를 위한 비관적 락 조회</li>
- * <li>캘린더 UI를 위한 예약 시작 시각/일간 목록 조회(프로젝션)</li>
- * </ul>
  */
 public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
 
     /** 상태별 방 개수를 반환한다(관리자/대시보드 통계용). */
     long countByStatus(PtRoomStatus status);
 
-    /**
-     * 커서 기반 PT 방 목록 조회 + 필터링.
-     *
-     * <p><b>커서 규칙</b></p>
-     * <ul>
-     * <li>cursorId가 null이면 최신부터 조회</li>
-     * <li>cursorId가 있으면 {@code ptRoomId < cursorId} 조건으로 이전 데이터를 조회</li>
-     * </ul>
-     *
-     * <p><b>필터 및 검색 규칙</b></p>
-     * <ul>
-     * <li>statuses가 null이면 상태 필터 미적용, 아니면 IN 조건 적용</li>
-     * <li>trainerId가 null이면 필터 미적용</li>
-     * <li>roomIds가 null이면 필터 미적용</li>
-     * <li>q가 null/empty면 검색 미적용, 아니면 <b>방 제목 / 트레이너 닉네임 / 트레이너 아이디</b>에 대해 OR 검색 (대소문자 무시)</li>
-     * </ul>
-     *
-     * <p><b>정렬</b></p>
-     * ptRoomId 내림차순(최신 우선)
-     */
+    // ============================================================
+    // 목록 조회 - 기존 JPQL 유지 (Admin 등에서 사용)
+    // ============================================================
     @Query("""
         SELECT DISTINCT p
         FROM PtRoomEntity p
@@ -76,33 +51,121 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
             Pageable pageable
     );
 
-    /**
-     * 특정 PT 방 row를 비관적 락(PESSIMISTIC_WRITE)으로 조회한다.
-     *
-     * <p>
-     * 방 시작/종료/참가 등 상태 변경이 동시 요청으로 충돌할 수 있는 구간에서
-     * SELECT ... FOR UPDATE 용도로 사용한다.
-     * </p>
-     *
-     * @param ptRoomId PT 방 ID
-     */
+    // ============================================================
+    // 검색 (Native Query) - LIVE 탭
+    // ============================================================
+    @Query(value = "SELECT DISTINCT p.* FROM pt_rooms p " +
+            "JOIN users u ON u.user_id = p.trainer_id " +
+            "WHERE (:cursorId IS NULL OR p.pt_room_id < :cursorId) " +
+            "AND p.status = 'LIVE' " +
+            "AND (" +
+            "  REPLACE(LOWER(p.title), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.nickname), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.handle), ' ', '') LIKE :keyword " +
+            ") " +
+            "ORDER BY p.pt_room_id DESC " +
+            "FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<PtRoomEntity> findPtRoomsLiveWithSearch(
+            @Param("cursorId") Long cursorId,
+            @Param("keyword") String keyword,
+            @Param("limitSize") int limitSize
+    );
+
+    // ============================================================
+    // 검색 (Native Query) - RESERVED 탭
+    // ============================================================
+    @Query(value = "SELECT DISTINCT p.* FROM pt_rooms p " +
+            "JOIN users u ON u.user_id = p.trainer_id " +
+            "WHERE (:cursorId IS NULL OR p.pt_room_id < :cursorId) " +
+            "AND p.status = 'SCHEDULED' " +
+            "AND (" +
+            "  REPLACE(LOWER(p.title), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.nickname), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.handle), ' ', '') LIKE :keyword " +
+            ") " +
+            "ORDER BY p.pt_room_id DESC " +
+            "FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<PtRoomEntity> findPtRoomsScheduledWithSearch(
+            @Param("cursorId") Long cursorId,
+            @Param("keyword") String keyword,
+            @Param("limitSize") int limitSize
+    );
+
+    // ============================================================
+    // 검색 (Native Query) - ALL 탭 (LIVE + SCHEDULED)
+    // ============================================================
+    @Query(value = "SELECT DISTINCT p.* FROM pt_rooms p " +
+            "JOIN users u ON u.user_id = p.trainer_id " +
+            "WHERE (:cursorId IS NULL OR p.pt_room_id < :cursorId) " +
+            "AND p.status IN ('LIVE', 'SCHEDULED') " +
+            "AND (" +
+            "  REPLACE(LOWER(p.title), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.nickname), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.handle), ' ', '') LIKE :keyword " +
+            ") " +
+            "ORDER BY p.pt_room_id DESC " +
+            "FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<PtRoomEntity> findPtRoomsAllWithSearch(
+            @Param("cursorId") Long cursorId,
+            @Param("keyword") String keyword,
+            @Param("limitSize") int limitSize
+    );
+
+    // ============================================================
+    // 검색 (Native Query) - MY_PT 탭 (트레이너 본인 방)
+    // ============================================================
+    @Query(value = "SELECT DISTINCT p.* FROM pt_rooms p " +
+            "JOIN users u ON u.user_id = p.trainer_id " +
+            "WHERE (:cursorId IS NULL OR p.pt_room_id < :cursorId) " +
+            "AND p.trainer_id = :trainerId " +
+            "AND (" +
+            "  REPLACE(LOWER(p.title), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.nickname), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.handle), ' ', '') LIKE :keyword " +
+            ") " +
+            "ORDER BY p.pt_room_id DESC " +
+            "FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<PtRoomEntity> findPtRoomsByTrainerWithSearch(
+            @Param("cursorId") Long cursorId,
+            @Param("trainerId") Long trainerId,
+            @Param("keyword") String keyword,
+            @Param("limitSize") int limitSize
+    );
+
+    // ============================================================
+    // 검색 (Native Query) - MY_JOINED 탭 (참여한 방)
+    // ============================================================
+    @Query(value = "SELECT DISTINCT p.* FROM pt_rooms p " +
+            "JOIN users u ON u.user_id = p.trainer_id " +
+            "WHERE (:cursorId IS NULL OR p.pt_room_id < :cursorId) " +
+            "AND p.pt_room_id IN :roomIds " +
+            "AND (" +
+            "  REPLACE(LOWER(p.title), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.nickname), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.handle), ' ', '') LIKE :keyword " +
+            ") " +
+            "ORDER BY p.pt_room_id DESC " +
+            "FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<PtRoomEntity> findPtRoomsByRoomIdsWithSearch(
+            @Param("cursorId") Long cursorId,
+            @Param("roomIds") List<Long> roomIds,
+            @Param("keyword") String keyword,
+            @Param("limitSize") int limitSize
+    );
+
+    // ============================================================
+    // 기존 메서드들 유지
+    // ============================================================
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM PtRoomEntity r WHERE r.ptRoomId = :ptRoomId")
     Optional<PtRoomEntity> findByIdForUpdate(@Param("ptRoomId") Long ptRoomId);
 
-    /**
-     * 사용자 캘린더 표시용: 예약 PT 시작 시각 목록을 조회한다.
-     *
-     * <p><b>포함 조건</b></p>
-     * <ul>
-     * <li>roomType이 RESERVED</li>
-     * <li>scheduledStartAt이 [startInclusive, endExclusive) 범위</li>
-     * <li>방 상태가 statuses에 포함</li>
-     * <li>사용자가 트레이너이거나(방 소유자), 참가자 조건을 만족하는 경우만 포함</li>
-     * </ul>
-     *
-     * @return 예약 시작 시각 목록(중복 제거)
-     */
     @Query("""
     SELECT DISTINCT r.scheduledStartAt
     FROM PtRoomEntity r
@@ -125,16 +188,6 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
             @Param("endExclusive") Instant endExclusive
     );
 
-    /**
-     * 사용자 일간(하루) PT 목록 조회(캘린더 상세/리스트용).
-     *
-     * <p>
-     * {@link DailyVideoPtRow} 프로젝션으로 필요한 컬럼만 조회하여 성능을 최적화한다.
-     * </p>
-     *
-     * <p><b>정렬</b></p>
-     * scheduledStartAt 오름차순
-     */
     @Query("""
     SELECT r.ptRoomId AS ptRoomId,
            r.scheduledStartAt AS scheduledStartAt,
@@ -160,5 +213,4 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
             @Param("startInclusive") Instant startInclusive,
             @Param("endExclusive") Instant endExclusive
     );
-
 }
