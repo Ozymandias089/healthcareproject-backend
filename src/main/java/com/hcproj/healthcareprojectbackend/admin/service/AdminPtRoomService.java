@@ -11,6 +11,7 @@ import com.hcproj.healthcareprojectbackend.community.entity.ReportType;
 import com.hcproj.healthcareprojectbackend.community.repository.ReportRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import com.hcproj.healthcareprojectbackend.global.util.UtilityProvider;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomEntity;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomStatus;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
@@ -81,7 +82,7 @@ public class AdminPtRoomService {
         }
 
         // 3) 검색어 정규화
-        String normalizedKeyword = normalizeKeyword(query);
+        String normalizedKeyword = UtilityProvider.normalizeKeyword(query);
 
         // 4) 페이지네이션 설정
         int offsetSize = page * size;
@@ -193,12 +194,4 @@ public class AdminPtRoomService {
                 .build();
     }
 
-    /**
-     * 검색어 정규화 (null/빈값 처리)
-     */
-    private String normalizeKeyword(String keyword) {
-        if (keyword == null) return null;
-        String trimmed = keyword.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
 }

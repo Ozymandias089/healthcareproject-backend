@@ -131,14 +131,4 @@ public class AdminUserService {
                 .createdAt(user.getCreatedAt())
                 .build();
     }
-
-    // ============================================================
-    // Private Helper Methods
-    // ============================================================
-
-    private String normalizeKeyword(String keyword) {
-        if (keyword == null) return null;
-        String trimmed = keyword.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
 }
