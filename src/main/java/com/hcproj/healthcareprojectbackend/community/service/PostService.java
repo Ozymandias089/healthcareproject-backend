@@ -67,8 +67,8 @@ public class PostService {
         if (q == null || q.isBlank()) {
             entities = postRepository.findPostList(cursorId, category, PostStatus.POSTED, pageable);
         } else {
-            // ★ 수정됨: 자바에서 미리 앞뒤로 %를 붙여줍니다.
-            String searchPattern = "%" + q + "%";
+            // [수정] .trim()을 추가하여 검색어 앞뒤의 공백을 완전히 제거합니다.
+            String searchPattern = "%" + q.trim() + "%";
 
             String type = (searchBy == null) ? "TITLE" : searchBy.toUpperCase();
             switch (type) {

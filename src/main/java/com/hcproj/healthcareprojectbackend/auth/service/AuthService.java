@@ -131,6 +131,8 @@ public class AuthService {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD);
         }
 
+        if (!user.isEmailVerified()) throw new BusinessException(ErrorCode.USER_EMAIL_NOT_VERIFIED);
+
         if (user.getStatus().equals(UserStatus.WITHDRAWN)) throw new BusinessException(ErrorCode.ALREADY_WITHDRAWN);
 
         return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
