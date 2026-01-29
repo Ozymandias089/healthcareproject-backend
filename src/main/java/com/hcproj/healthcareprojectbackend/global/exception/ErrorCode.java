@@ -96,16 +96,22 @@ public enum ErrorCode {
     /** 동일한 요청 과다 */
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "AUTH-008", "동일한 요청을 너무 많이 생성했습니다"),
 
+    /** 정지된 유저 */
     USER_SUSPENDED(HttpStatus.FORBIDDEN, "AUTH-009", "이용이 정지된 계정입니다."),
 
+    /** 소셜 로그인에 이메일이 없음 */
     SOCIAL_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "AUTH-010", "소셜 로그인에 이메일이 필요합니다"),
 
+    /** 해당 Provider 계정이 이미 연동됨 */
     SOCIAL_ACCOUNT_TAKEN(HttpStatus.CONFLICT, "AUTH-011", "이미 연동된 프로바이더입니다"),
 
+    /** 이미 해당 Provider가 연동됨 */
     SOCIAL_ALREADY_CONNECTED(HttpStatus.CONFLICT, "AUTH-012", "이미 해당 프로바이더를 연동했습니다"),
 
+    /** 프로바이더가 연동되어있지 않음 */
     SOCIAL_ACCOUNT_NOT_CONNECTED(HttpStatus.BAD_REQUEST, "AUTH-013", "해당 프로바이더가 연결되어있지 않습니다"),
 
+    /** 패스워드가 설정되어 있지 않은 유저가 마지막 소셜 로그인 수단을 연동 해제 시도 */
     CANNOT_DISCONNECT_LAST_LOGIN_METHOD(HttpStatus.CONFLICT, "AUTH-014", "마지막 로그인 수단입니다"),
 
     /** 이미 탈퇴된 회원 */
@@ -117,6 +123,7 @@ public enum ErrorCode {
     /** 비밀번호가 일치하지 않음 */
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "AUTH-017", "비밀번호가 일치하지 않습니다"),
 
+    /** 이메일이 인증되지 않음 */
     USER_EMAIL_NOT_VERIFIED(HttpStatus.UNAUTHORIZED, "AUTH-018", "인증되지 않은 이메일입니다."),
 
     // -------------------------
