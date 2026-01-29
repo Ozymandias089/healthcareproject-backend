@@ -6,7 +6,7 @@ import java.util.List;
 @Builder
 public record PostListResponseDTO(
         List<PostSummaryDto> notices, // [추가] 공지사항 리스트 (프론트 요청)
-        List<PostSummaryDto> items,   // [변경] list -> items (프론트 요청)
+        List<PostSummaryDto> list,   // [변경] list -> items (프론트 요청)
         PageInfo pageInfo             // [추가] 페이지 정보 객체
 ) {
     @Builder
