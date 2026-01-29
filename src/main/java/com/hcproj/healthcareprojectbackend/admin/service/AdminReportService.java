@@ -1,6 +1,7 @@
 package com.hcproj.healthcareprojectbackend.admin.service;
 
 import com.hcproj.healthcareprojectbackend.admin.dto.request.ReportStatusUpdateRequestDTO;
+import com.hcproj.healthcareprojectbackend.admin.dto.response.Admincommentdetailresponsedto;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminReportListResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
@@ -88,7 +89,8 @@ public class AdminReportService {
                                 .map(UserEntity::getNickname)
                                 .orElse("삭제된 댓글");
                     }
-                    else if (report.getType() == ReportType.PT_ROOM) { // [추가됨] 화상 PT 트레이너 찾기
+                    else if (report.getType() == ReportType.PT_ROOM) {
+                        // 화상 PT 트레이너 찾기
                         targetAuthorHandle = ptRoomRepository.findById(report.getTargetId())
                                 .flatMap(room -> userRepository.findById(room.getTrainerId()))
                                 .map(UserEntity::getNickname)
@@ -97,7 +99,7 @@ public class AdminReportService {
 
                     return AdminReportListResponseDTO.AdminReportItemDTO.builder()
                             .reportId(report.getReportId())
-                            .reporterHandle(reporter != null ? reporter.getNickname() : "알 수 없음") // 신고자 닉네임
+                            .reporterHandle(reporter != null ? reporter.getNickname() : "알 수 없음")
                             .targetAuthorHandle(targetAuthorHandle)
                             .type(report.getType())
                             .targetId(report.getTargetId())
@@ -132,6 +134,39 @@ public class AdminReportService {
         }
     }
 
+    // 3. 댓글 상세 조회 (관리자용)
+    @Transactional(readOnly = true)
+    public Admincommentdetailresponsedto getCommentDetail(Long commentId) {
+        // 댓글 조회
+        CommentEntity comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        // 작성자 조회
+        UserEntity author = userRepository.findById(comment.getUserId())
+                .orElse(null);
+
+        // 게시글 제목 조회
+        String postTitle = postRepository.findById(comment.getPostId())
+                .map(PostEntity::getTitle)
+                .orElse("삭제된 게시글");
+
+        return new Admincommentdetailresponsedto(
+                comment.getCommentId(),
+                comment.getPostId(),
+                postTitle,
+                new Admincommentdetailresponsedto.AuthorDTO(
+                        comment.getUserId(),
+                        author != null ? author.getNickname() : "알 수 없음",
+                        author != null ? author.getHandle() : "unknown"
+                ),
+                comment.getContent(),
+                comment.getStatus(),
+                comment.getCreatedAt(),
+                comment.getUpdatedAt(),
+                comment.getDeletedAt()
+        );
+    }
+
     // [내부 메서드] 신고 처리 승인 시 로직 (실제 삭제/종료 수행)
     private void processReportAndContent(ReportEntity currentReport) {
         currentReport.process(); // 신고 상태 'PROCESSED'로 변경
@@ -149,10 +184,10 @@ public class AdminReportService {
                 comment.delete();
             }
         }
-        else if (currentReport.getType() == ReportType.PT_ROOM) { // [추가됨] 화상 PT 강제 종료
+        else if (currentReport.getType() == ReportType.PT_ROOM) {
             PtRoomEntity room = ptRoomRepository.findById(currentReport.getTargetId()).orElse(null);
             if (room != null) {
-                room.forceClose(); // 강제 종료 및 삭제 처리 (PtRoomEntity에 구현된 메서드)
+                room.forceClose(); // 강제 종료 및 삭제 처리
             }
         }
 
