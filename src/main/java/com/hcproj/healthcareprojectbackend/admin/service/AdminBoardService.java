@@ -189,14 +189,4 @@ public class AdminBoardService {
             report.process(); // 신고 상태를 PROCESSED로 변경
         }
     }
-
-    // ============================================================
-    // Private Helper Methods
-    // ============================================================
-
-    private String normalizeKeyword(String keyword) {
-        if (keyword == null) return null;
-        String trimmed = keyword.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
 }
