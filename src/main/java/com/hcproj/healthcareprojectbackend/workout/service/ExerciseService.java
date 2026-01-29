@@ -2,6 +2,7 @@ package com.hcproj.healthcareprojectbackend.workout.service;
 
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import com.hcproj.healthcareprojectbackend.global.util.UtilityProvider;
 import com.hcproj.healthcareprojectbackend.workout.dto.response.AlternativeExerciseDTO;
 import com.hcproj.healthcareprojectbackend.workout.dto.response.ExerciseDetailResponseDTO;
 import com.hcproj.healthcareprojectbackend.workout.entity.ExerciseEntity;
@@ -83,10 +84,10 @@ public class ExerciseService {
         int limitSize = actualLimit + 1; // hasNext 판단용
 
         // 2. 검색어 정규화
-        String normalizedKeyword = normalizeKeyword(keyword);
+        String normalizedKeyword = UtilityProvider.normalizeKeyword(keyword);
 
         // 3. bodyPart 정규화
-        String normalizedBodyPart = normalizeBodyPart(bodyPart);
+        String normalizedBodyPart = UtilityProvider.normalizeBodyPart(bodyPart);
 
         // 4. 조회 (검색어 유무에 따라 분기)
         List<ExerciseEntity> entities;
@@ -171,21 +172,5 @@ public class ExerciseService {
                 .exerciseId(exerciseId)
                 .message("운동이 삭제되었습니다.")
                 .build();
-    }
-
-    // ============================================================
-    // Private Helper Methods
-    // ============================================================
-
-    private String normalizeKeyword(String keyword) {
-        if (keyword == null) return null;
-        String trimmed = keyword.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private String normalizeBodyPart(String bodyPart) {
-        if (bodyPart == null) return null;
-        String trimmed = bodyPart.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }

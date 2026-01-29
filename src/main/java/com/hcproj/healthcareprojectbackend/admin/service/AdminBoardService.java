@@ -10,6 +10,7 @@ import com.hcproj.healthcareprojectbackend.community.repository.PostRepository;
 import com.hcproj.healthcareprojectbackend.community.repository.ReportRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import com.hcproj.healthcareprojectbackend.global.util.UtilityProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,7 +57,7 @@ public class AdminBoardService {
         }
 
         // 2) 검색어 정규화
-        String normalizedKeyword = normalizeKeyword(keyword);
+        String normalizedKeyword = UtilityProvider.normalizeKeyword(keyword);
 
         // 3) 페이지네이션 계산
         int offsetSize = page * size;

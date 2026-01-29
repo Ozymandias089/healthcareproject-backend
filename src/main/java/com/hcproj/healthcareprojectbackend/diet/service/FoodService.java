@@ -8,6 +8,7 @@ import com.hcproj.healthcareprojectbackend.diet.entity.FoodEntity;
 import com.hcproj.healthcareprojectbackend.diet.repository.FoodRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import com.hcproj.healthcareprojectbackend.global.util.UtilityProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,7 +57,7 @@ public class FoodService {
         int limitSize = actualLimit + 1; // hasNext 판단용
 
         // 2. 검색어 정규화
-        String normalizedKeyword = normalizeKeyword(keyword);
+        String normalizedKeyword = UtilityProvider.normalizeKeyword(keyword);
 
         // 3. 조회 (검색어 유무에 따라 분기)
         List<FoodEntity> entities;
@@ -146,15 +147,5 @@ public class FoodService {
                 .foodId(foodId)
                 .message("음식이 삭제되었습니다.")
                 .build();
-    }
-
-    // ============================================================
-    // Private Helper Methods
-    // ============================================================
-
-    private String normalizeKeyword(String keyword) {
-        if (keyword == null) return null;
-        String trimmed = keyword.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }

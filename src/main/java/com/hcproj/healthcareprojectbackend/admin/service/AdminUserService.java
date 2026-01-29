@@ -9,6 +9,7 @@ import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import com.hcproj.healthcareprojectbackend.global.util.UtilityProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +45,7 @@ public class AdminUserService {
         }
 
         // 검색어 정규화
-        String normalizedKeyword = normalizeKeyword(keyword);
+        String normalizedKeyword = UtilityProvider.normalizeKeyword(keyword);
 
         // 페이지네이션 계산
         int offsetSize = page * size;
