@@ -68,8 +68,7 @@ public class ReportEntity extends BaseTimeEntity {
     @Column(name = "target_id", nullable = false)
     private Long targetId;
 
-    @Lob
-    @Column(name = "reason", nullable = false)
+    @Column(name = "reason", columnDefinition = "text", nullable = false)
     private String reason;
 
     @Enumerated(EnumType.STRING)

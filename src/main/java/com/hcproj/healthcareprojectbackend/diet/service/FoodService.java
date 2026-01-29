@@ -9,6 +9,8 @@ import com.hcproj.healthcareprojectbackend.diet.repository.FoodRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,26 +53,23 @@ public class FoodService {
      */
     @Transactional(readOnly = true)
     public FoodListResponseDTO getFoodList(Long cursor, Integer limit, String keyword) {
-        // 1. limit 유효성 검사
         int actualLimit = (limit == null || limit <= 0) ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
 
-        // 2. limit + 1개 조회 (hasNext 판단용)
+        Pageable pageable = PageRequest.of(0, actualLimit + 1);
+
         List<FoodEntity> entities = foodRepository.findFoodsWithCursor(
                 cursor,
                 keyword,
-                actualLimit + 1
+                pageable
         );
 
-        // 3. hasNext 판단
         boolean hasNext = entities.size() > actualLimit;
 
-        // 4. 실제 반환할 데이터 (limit개만)
         List<FoodEntity> resultEntities = hasNext
                 ? entities.subList(0, actualLimit)
                 : entities;
 
-        // 5. DTO 변환
-        List<FoodListResponseDTO.FoodItemDTO> items = resultEntities.stream()
+        var items = resultEntities.stream()
                 .map(entity -> new FoodListResponseDTO.FoodItemDTO(
                         entity.getFoodId(),
                         entity.getName(),
@@ -83,13 +82,13 @@ public class FoodService {
                 ))
                 .toList();
 
-        // 6. nextCursor 계산
         Long nextCursor = hasNext && !resultEntities.isEmpty()
-                ? resultEntities.get(resultEntities.size() - 1).getFoodId()
+                ? resultEntities.getLast().getFoodId()
                 : null;
 
         return new FoodListResponseDTO(items, nextCursor, hasNext);
     }
+
     /**
      * 음식 등록 (관리자 전용)
      */

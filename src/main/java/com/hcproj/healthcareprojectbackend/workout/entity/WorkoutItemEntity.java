@@ -74,8 +74,7 @@ public class WorkoutItemEntity {
     @Column(name = "rpe")
     private Integer rpe;
 
-    @Lob
-    @Column(name = "amount")
+    @Column(name = "amount", columnDefinition = "text")
     private String amount;
 
     @Column(name = "is_checked", nullable = false)

@@ -49,12 +49,10 @@ public class ExerciseEntity extends BaseTimeEntity {
     @Column(name = "image_url", length = 2048)
     private String imageUrl;
 
-    @Lob
-    @Column(name = "description", nullable = false)
+    @Column(name = "description", columnDefinition = "text", nullable = false)
     private String description;
 
-    @Lob
-    @Column(name = "precautions")
+    @Column(name = "precautions", columnDefinition = "text")
     private String precautions;
 
     @Column(name = "youtube_url", length = 2048)

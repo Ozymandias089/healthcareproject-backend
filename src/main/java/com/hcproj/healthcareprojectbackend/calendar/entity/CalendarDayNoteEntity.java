@@ -53,8 +53,7 @@ public class CalendarDayNoteEntity extends BaseTimeEntity {
     @Column(name = "note_date", nullable = false)
     private LocalDate noteDate;
 
-    @Lob
-    @Column(name = "note", nullable = false)
+    @Column(name = "note",columnDefinition = "text", nullable = false)
     private String note;
 
     /**

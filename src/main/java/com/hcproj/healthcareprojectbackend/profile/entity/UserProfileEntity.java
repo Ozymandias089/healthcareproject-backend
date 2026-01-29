@@ -4,6 +4,7 @@ import com.hcproj.healthcareprojectbackend.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -78,7 +79,7 @@ public class UserProfileEntity extends BaseTimeEntity {
     )
     @Enumerated(EnumType.STRING)
     @Column(name = "allergy", length = 30, nullable = false)
-    private List<AllergyType> allergies;
+    private List<AllergyType> allergies = new ArrayList<>();
 
     /**
      * 알레르기 목록을 교체한다.

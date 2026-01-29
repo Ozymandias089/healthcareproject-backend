@@ -52,21 +52,20 @@ public interface FoodRepository extends JpaRepository<FoodEntity, Long> {
      *
      * @param cursor  기준 foodId(선택)
      * @param keyword 검색어(선택)
-     * @param limit   조회 개수 제한
      */
     @Query("""
-            SELECT f FROM FoodEntity f
-            WHERE f.isActive = true
-              AND (:cursor IS NULL OR f.foodId > :cursor)
-              AND (:keyword IS NULL OR LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
-            ORDER BY f.foodId ASC
-            LIMIT :limit
-            """)
+    SELECT f FROM FoodEntity f
+    WHERE f.isActive = true
+      AND (:cursor IS NULL OR f.foodId > :cursor)
+      AND (:keyword IS NULL OR LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+    ORDER BY f.foodId ASC
+""")
     List<FoodEntity> findFoodsWithCursor(
             @Param("cursor") Long cursor,
             @Param("keyword") String keyword,
-            @Param("limit") int limit
+            Pageable pageable
     );
+
 
     /**
      * 특정 알레르기 코드가 포함되지 않은 활성 음식 목록을 조회한다.

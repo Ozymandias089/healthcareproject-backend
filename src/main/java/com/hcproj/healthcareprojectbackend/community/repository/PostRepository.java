@@ -20,7 +20,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             "AND (:cursorId IS NULL OR p.post_id < :cursorId) " +
             "AND p.category = :category " +
             "ORDER BY p.post_id DESC " +
-            "FETCH FIRST :limitSize ROWS ONLY",
+            "LIMIT :limitSize",
             nativeQuery = true)
     List<PostEntity> findPostListByCategory(
             @Param("cursorId") Long cursorId,
@@ -35,7 +35,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             "WHERE p.status = 'POSTED' " +
             "AND (:cursorId IS NULL OR p.post_id < :cursorId) " +
             "ORDER BY p.post_id DESC " +
-            "FETCH FIRST :limitSize ROWS ONLY",
+            "LIMIT :limitSize",
             nativeQuery = true)
     List<PostEntity> findPostListAll(
             @Param("cursorId") Long cursorId,
@@ -51,7 +51,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             "AND p.category = :category " +
             "AND REPLACE(p.title, ' ', '') LIKE :keyword " +
             "ORDER BY p.post_id DESC " +
-            "FETCH FIRST :limitSize ROWS ONLY",
+            "LIMIT :limitSize",
             nativeQuery = true)
     List<PostEntity> findPostListByTitleAndCategory(
             @Param("cursorId") Long cursorId,
@@ -68,7 +68,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             "AND (:cursorId IS NULL OR p.post_id < :cursorId) " +
             "AND REPLACE(p.title, ' ', '') LIKE :keyword " +
             "ORDER BY p.post_id DESC " +
-            "FETCH FIRST :limitSize ROWS ONLY",
+            "LIMIT :limitSize",
             nativeQuery = true)
     List<PostEntity> findPostListByTitle(
             @Param("cursorId") Long cursorId,
@@ -85,7 +85,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             "AND p.category = :category " +
             "AND p.user_id IN (SELECT u.user_id FROM users u WHERE REPLACE(u.nickname, ' ', '') LIKE :keyword) " +
             "ORDER BY p.post_id DESC " +
-            "FETCH FIRST :limitSize ROWS ONLY",
+            "LIMIT :limitSize",
             nativeQuery = true)
     List<PostEntity> findPostListByAuthorAndCategory(
             @Param("cursorId") Long cursorId,
@@ -102,7 +102,7 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             "AND (:cursorId IS NULL OR p.post_id < :cursorId) " +
             "AND p.user_id IN (SELECT u.user_id FROM users u WHERE REPLACE(u.nickname, ' ', '') LIKE :keyword) " +
             "ORDER BY p.post_id DESC " +
-            "FETCH FIRST :limitSize ROWS ONLY",
+            "LIMIT :limitSize",
             nativeQuery = true)
     List<PostEntity> findPostListByAuthor(
             @Param("cursorId") Long cursorId,
@@ -117,7 +117,17 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
 
     long countByCreatedAtAfter(java.time.Instant startOfDay);
 
-    @Query("SELECT p FROM PostEntity p WHERE p.title LIKE %:keyword% OR p.content LIKE %:keyword%")
+    @Query("""
+    SELECT p
+    FROM PostEntity p
+    WHERE (:category IS NULL OR p.category = :category)
+      AND (:status IS NULL OR p.status = :status)
+      AND (
+            :keyword IS NULL OR :keyword = ''
+         OR p.title LIKE CONCAT('%', :keyword, '%')
+         OR p.content LIKE CONCAT('%', :keyword, '%')
+      )
+""")
     Page<PostEntity> findAdminPostList(
             @Param("category") String category,
             @Param("status") PostStatus status,
@@ -125,7 +135,18 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             Pageable pageable
     );
 
-    @Query("SELECT COUNT(p) FROM PostEntity p WHERE p.title LIKE %:keyword%")
+
+    @Query("""
+    SELECT COUNT(p)
+    FROM PostEntity p
+    WHERE (:category IS NULL OR p.category = :category)
+      AND (:status IS NULL OR p.status = :status)
+      AND (
+            :keyword IS NULL OR :keyword = ''
+         OR p.title LIKE CONCAT('%', :keyword, '%')
+         OR p.content LIKE CONCAT('%', :keyword, '%')
+      )
+""")
     long countAdminPostList(
             @Param("category") String category,
             @Param("status") PostStatus status,

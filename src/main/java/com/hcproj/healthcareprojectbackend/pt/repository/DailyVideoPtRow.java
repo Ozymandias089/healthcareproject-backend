@@ -24,7 +24,7 @@ public interface DailyVideoPtRow {
     /** PT 방 ID */
     Instant getScheduledStartAt();
     /** 방 상태 */
-    PtRoomStatus getRoomStatus();
+    PtRoomStatus getStatus();
     /** 방 제목 */
     String getTitle();
 }

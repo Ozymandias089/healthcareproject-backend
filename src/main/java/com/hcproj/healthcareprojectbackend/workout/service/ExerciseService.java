@@ -10,6 +10,8 @@ import com.hcproj.healthcareprojectbackend.workout.dto.response.ExerciseListResp
 import com.hcproj.healthcareprojectbackend.workout.dto.request.ExerciseCreateRequestDTO;
 import com.hcproj.healthcareprojectbackend.workout.dto.response.ExerciseCreateResponseDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,7 +66,8 @@ public class ExerciseService {
 
         List<ExerciseEntity> alternativeEntities = exerciseRepository.findAlternatives(
                 exercise.getBodyPart(),
-                exercise.getExerciseId()
+                exercise.getExerciseId(),
+                PageRequest.of(0, 3)
         );
 
         return alternativeEntities.stream()
@@ -81,27 +84,24 @@ public class ExerciseService {
      */
     @Transactional(readOnly = true)
     public ExerciseListResponseDTO getExerciseList(Long cursor, Integer limit, String keyword, String bodyPart) {
-        // 1. limit 유효성 검사
         int actualLimit = (limit == null || limit <= 0) ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
 
-        // 2. limit + 1개 조회 (hasNext 판단용)
+        Pageable pageable = PageRequest.of(0, actualLimit + 1);
+
         List<ExerciseEntity> entities = exerciseRepository.findExercisesWithCursor(
                 cursor,
                 keyword,
                 bodyPart,
-                actualLimit + 1
+                pageable
         );
 
-        // 3. hasNext 판단
         boolean hasNext = entities.size() > actualLimit;
 
-        // 4. 실제 반환할 데이터 (limit개만)
         List<ExerciseEntity> resultEntities = hasNext
                 ? entities.subList(0, actualLimit)
                 : entities;
 
-        // 5. DTO 변환
-        List<ExerciseListResponseDTO.ExerciseItemDTO> items = resultEntities.stream()
+        var items = resultEntities.stream()
                 .map(entity -> new ExerciseListResponseDTO.ExerciseItemDTO(
                         entity.getExerciseId(),
                         entity.getName(),
@@ -112,7 +112,6 @@ public class ExerciseService {
                 ))
                 .toList();
 
-        // 6. nextCursor 계산
         Long nextCursor = hasNext && !resultEntities.isEmpty()
                 ? resultEntities.getLast().getExerciseId()
                 : null;

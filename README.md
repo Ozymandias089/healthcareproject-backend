@@ -2,8 +2,8 @@
 
 Java Spring Boot 기반 헬스케어(운동/식단/커뮤니티/PT) 백엔드 프로젝트입니다.
 
-- 개발 환경: H2(In-Memory)
-- 운영 환경: Oracle DB(예정)
+- 개발 환경: H2(In-Memory), Redis
+- 운영 환경: Oracle DB(예정), Redis
 - 인증: JWT (principal = handle, details = userId)
 - 공통 응답 포맷: ApiResponse
 - 기능 단위 패키지 구조(auth / profile / trainer / calendar / pt / community ...)
@@ -22,7 +22,6 @@ Java Spring Boot 기반 헬스케어(운동/식단/커뮤니티/PT) 백엔드 �
 - Cloud: AWS SDK (S3)
 - AI: Spring AI OpenAI Starter
 - Build: Gradle
-- Test: JUnit 5, Spring Security Test
 
 ---
 

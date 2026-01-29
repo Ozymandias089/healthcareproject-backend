@@ -44,34 +44,31 @@ public interface ExerciseRepository extends JpaRepository<ExerciseEntity, Long> 
      * @return 대체 운동 목록 (최대 3개)
      */
     @Query("""
-            SELECT e FROM ExerciseEntity e
-            WHERE e.bodyPart = :bodyPart
-              AND e.exerciseId <> :excludeId
-              AND e.isActive = true
-            ORDER BY e.exerciseId ASC
-            LIMIT 3
-            """)
+    SELECT e FROM ExerciseEntity e
+    WHERE e.bodyPart = :bodyPart
+      AND e.exerciseId <> :excludeId
+      AND e.isActive = true
+    ORDER BY e.exerciseId ASC
+""")
     List<ExerciseEntity> findAlternatives(
             @Param("bodyPart") String bodyPart,
-            @Param("excludeId") Long excludeId
+            @Param("excludeId") Long excludeId,
+            Pageable pageable
     );
-    /**
-     * 운동 리스트 조회 (무한 스크롤, 검색, 필터)
-     */
+
     @Query("""
-            SELECT e FROM ExerciseEntity e
-            WHERE e.isActive = true
-              AND (:cursor IS NULL OR e.exerciseId > :cursor)
-              AND (:keyword IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
-              AND (:bodyPart IS NULL OR e.bodyPart = :bodyPart)
-            ORDER BY e.exerciseId ASC
-            LIMIT :limit
-            """)
+    SELECT e FROM ExerciseEntity e
+    WHERE e.isActive = true
+      AND (:cursor IS NULL OR e.exerciseId > :cursor)
+      AND (:keyword IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+      AND (:bodyPart IS NULL OR e.bodyPart = :bodyPart)
+    ORDER BY e.exerciseId ASC
+""")
     List<ExerciseEntity> findExercisesWithCursor(
             @Param("cursor") Long cursor,
             @Param("keyword") String keyword,
             @Param("bodyPart") String bodyPart,
-            @Param("limit") int limit
+            Pageable pageable
     );
 
     /**
