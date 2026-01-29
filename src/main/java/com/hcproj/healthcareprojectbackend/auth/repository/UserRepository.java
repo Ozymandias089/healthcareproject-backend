@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.List;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -76,5 +77,57 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             @Param("role") UserRole role,
             @Param("keyword") String keyword,
             Pageable pageable
+    );
+
+    // ============================================================
+    // 관리자용 사용자 목록 조회 - 검색어 없음
+    // ============================================================
+    @Query(value = "SELECT * FROM users u " +
+            "WHERE (:role IS NULL OR u.role = :role) " +
+            "ORDER BY u.created_at DESC " +
+            "OFFSET :offsetSize ROWS FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<UserEntity> findAllWithFiltersNoKeyword(
+            @Param("role") String role,
+            @Param("limitSize") int limitSize,
+            @Param("offsetSize") int offsetSize
+    );
+
+    // ============================================================
+    // 관리자용 사용자 목록 조회 - 검색어 있음 (띄어쓰기 무시)
+    // ============================================================
+    @Query(value = "SELECT * FROM users u " +
+            "WHERE (:role IS NULL OR u.role = :role) " +
+            "AND (REPLACE(LOWER(u.nickname), ' ', '') LIKE :keyword " +
+            "     OR REPLACE(LOWER(u.email), ' ', '') LIKE :keyword) " +
+            "ORDER BY u.created_at DESC " +
+            "OFFSET :offsetSize ROWS FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<UserEntity> findAllWithFiltersAndKeyword(
+            @Param("role") String role,
+            @Param("keyword") String keyword,
+            @Param("limitSize") int limitSize,
+            @Param("offsetSize") int offsetSize
+    );
+
+    // ============================================================
+    // 관리자용 사용자 개수 - 검색어 없음
+    // ============================================================
+    @Query(value = "SELECT COUNT(*) FROM users u " +
+            "WHERE (:role IS NULL OR u.role = :role)",
+            nativeQuery = true)
+    long countAllWithFiltersNoKeyword(@Param("role") String role);
+
+    // ============================================================
+    // 관리자용 사용자 개수 - 검색어 있음 (띄어쓰기 무시)
+    // ============================================================
+    @Query(value = "SELECT COUNT(*) FROM users u " +
+            "WHERE (:role IS NULL OR u.role = :role) " +
+            "AND (REPLACE(LOWER(u.nickname), ' ', '') LIKE :keyword " +
+            "     OR REPLACE(LOWER(u.email), ' ', '') LIKE :keyword)",
+            nativeQuery = true)
+    long countAllWithFiltersAndKeyword(
+            @Param("role") String role,
+            @Param("keyword") String keyword
     );
 }
