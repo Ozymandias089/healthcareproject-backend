@@ -4,16 +4,13 @@ import com.hcproj.healthcareprojectbackend.admin.dto.request.UserStatusUpdateReq
 import com.hcproj.healthcareprojectbackend.admin.dto.response.AdminUserListResponseDTO;
 import com.hcproj.healthcareprojectbackend.admin.dto.response.UserStatusUpdateResponseDTO;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
-import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus; // [필수] 이거 꼭 있어야 해요!
+import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import com.hcproj.healthcareprojectbackend.global.util.UtilityProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +22,7 @@ public class AdminUserService {
 
     private final UserRepository userRepository;
 
-    // 1. 관리자 권한 승격 (기존 코드)
+    // 1. 관리자 권한 승격
     @Transactional
     public void promoteToAdmin(String targetHandle) {
         UserEntity target = userRepository.findByHandle(targetHandle)
@@ -33,28 +30,47 @@ public class AdminUserService {
         target.makeAdmin();
     }
 
-    // 2. 전체 회원 목록 조회 (기존 코드)
+    // 2. 전체 회원 목록 조회
     @Transactional(readOnly = true)
     public AdminUserListResponseDTO getUserList(int page, int size, String roleStr, String keyword) {
         // Role 파라미터 변환
-        UserRole role = null;
+        String roleParam = null;
         if (roleStr != null && !roleStr.isBlank()) {
             try {
-                role = UserRole.valueOf(roleStr.toUpperCase());
+                UserRole.valueOf(roleStr.toUpperCase());
+                roleParam = roleStr.toUpperCase();
             } catch (IllegalArgumentException e) {
                 // 잘못된 Role 값은 무시
             }
         }
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<UserEntity> userPage = userRepository.findAllWithFilters(role, keyword, pageable);
+        // 검색어 정규화
+        String normalizedKeyword = UtilityProvider.normalizeKeyword(keyword);
 
-        List<AdminUserListResponseDTO.AdminUserDetailDTO> dtoList = userPage.stream()
+        // 페이지네이션 계산
+        int offsetSize = page * size;
+
+        // 조회 (검색어 유무에 따라 분기)
+        List<UserEntity> users;
+        long total;
+
+        if (normalizedKeyword == null) {
+            // 검색어 없음
+            users = userRepository.findAllWithFiltersNoKeyword(roleParam, size, offsetSize);
+            total = userRepository.countAllWithFiltersNoKeyword(roleParam);
+        } else {
+            // 검색어 있음 - 띄어쓰기 제거 + 소문자 변환 + 와일드카드 추가
+            String likePattern = "%" + normalizedKeyword.toLowerCase().replace(" ", "") + "%";
+            users = userRepository.findAllWithFiltersAndKeyword(roleParam, likePattern, size, offsetSize);
+            total = userRepository.countAllWithFiltersAndKeyword(roleParam, likePattern);
+        }
+
+        List<AdminUserListResponseDTO.AdminUserDetailDTO> dtoList = users.stream()
                 .map(this::convertToDetailDTO)
                 .toList();
 
         return AdminUserListResponseDTO.builder()
-                .total(userPage.getTotalElements())
+                .total(total)
                 .list(dtoList)
                 .build();
     }
@@ -62,16 +78,13 @@ public class AdminUserService {
     // 3. 회원 상태 변경 (차단/해제)
     @Transactional
     public UserStatusUpdateResponseDTO updateUserStatus(Long userId, UserStatusUpdateRequestDTO request) {
-        // (1) 회원 조회
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // [추가 1] 관리자(ADMIN)는 차단할 수 없음!
         if (user.getRole() == UserRole.ADMIN) {
             throw new BusinessException(ErrorCode.CANNOT_BAN_ADMIN);
         }
 
-        // (2) 변경할 상태 파싱
         UserStatus newStatus;
         try {
             newStatus = UserStatus.valueOf(request.status().toUpperCase());
@@ -79,32 +92,26 @@ public class AdminUserService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // [추가 2] 상태 변경 검증 (이미 차단됨 / 차단 안됨)
         if (newStatus == UserStatus.SUSPENDED) {
             if (user.getStatus() == UserStatus.SUSPENDED) {
-                throw new BusinessException(ErrorCode.USER_ALREADY_BANNED); // "이미 차단된 회원입니다"
+                throw new BusinessException(ErrorCode.USER_ALREADY_BANNED);
             }
         } else if (newStatus == UserStatus.ACTIVE) {
             if (user.getStatus() != UserStatus.SUSPENDED) {
-                throw new BusinessException(ErrorCode.USER_NOT_BANNED); // "차단되지 않은 회원입니다"
+                throw new BusinessException(ErrorCode.USER_NOT_BANNED);
             }
         }
 
-        // (3) 상태 변경
         String previousStatus = user.getStatus().name();
         user.updateStatus(newStatus);
 
-        // (4) 결과 메시지 생성 (여기 수정됨!)
         String message = "회원 상태가 변경되었습니다.";
-
-        // [수정] BANNED -> SUSPENDED 로 변경
         if (newStatus == UserStatus.SUSPENDED) {
             message = "회원이 이용 정지되었습니다.";
         } else if (newStatus == UserStatus.ACTIVE) {
             message = "이용 정지가 해제되었습니다.";
         }
 
-        // (5) 응답 반환
         return UserStatusUpdateResponseDTO.builder()
                 .userId(user.getId())
                 .previousStatus(previousStatus)
@@ -113,7 +120,6 @@ public class AdminUserService {
                 .build();
     }
 
-    // Entity -> DTO 변환 헬퍼 메서드
     private AdminUserListResponseDTO.AdminUserDetailDTO convertToDetailDTO(UserEntity user) {
         return AdminUserListResponseDTO.AdminUserDetailDTO.builder()
                 .userId(user.getId())

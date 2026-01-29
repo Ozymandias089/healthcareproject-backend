@@ -58,4 +58,20 @@ public final class UtilityProvider {
         if (email == null) return null;
         return email.trim().toLowerCase();
     }
+
+    // ============================================================
+    // Private Helper Methods
+    // ============================================================
+
+    public static String normalizeKeyword(String keyword) {
+        if (keyword == null) return null;
+        String trimmed = keyword.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+        public static String normalizeBodyPart(String bodyPart) {
+        if (bodyPart == null) return null;
+        String trimmed = bodyPart.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
 }
