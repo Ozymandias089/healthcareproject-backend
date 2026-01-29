@@ -55,7 +55,7 @@ public class CalendarSummaryService {
 
     // ==================== Range Validation ====================
 
-    private static final int MAX_RANGE_DAYS = 35;
+    private static final int MAX_RANGE_DAYS = 42;
 
     private void validateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
@@ -255,21 +255,28 @@ public class CalendarSummaryService {
                 .map(day -> {
                     List<WorkoutItemEntity> items = workoutItemRepository
                             .findAllByWorkoutDayIdOrderBySortOrderAsc(day.getWorkoutDayId());
+
                     if (items.isEmpty()) {
-                        return DailyDetailResponseDTO.WorkoutSummaryDTO.builder().exists(false).build();
+                        return DailyDetailResponseDTO.WorkoutSummaryDTO.builder()
+                                .exists(false)
+                                .build();
                     }
 
-                    int totalMin = items.stream()
-                            .mapToInt(i -> i.getDurationMinutes() != null ? i.getDurationMinutes() : 0)
-                            .sum();
+                    int totalMin = day.getTotalMinutes() != null ? day.getTotalMinutes() : 0;
 
-                    List<String> names = exerciseRepository.findAllById(
-                                    items.stream().limit(2).map(WorkoutItemEntity::getExerciseId).toList()
-                            ).stream()
+                    List<Long> exerciseIds = items.stream()
+                            .map(WorkoutItemEntity::getExerciseId)
+                            .filter(Objects::nonNull)
+                            .distinct()
+                            .limit(2)
+                            .toList();
+
+                    List<String> names = exerciseRepository.findAllById(exerciseIds).stream()
                             .map(ExerciseEntity::getName)
                             .toList();
 
-                    String summary = (day.getTitle() != null ? day.getTitle() + " · " : "") + totalMin + "분";
+                    String summary = (day.getTitle() != null ? day.getTitle() + " · " : "")
+                            + totalMin + "분";
 
                     return DailyDetailResponseDTO.WorkoutSummaryDTO.builder()
                             .exists(true)

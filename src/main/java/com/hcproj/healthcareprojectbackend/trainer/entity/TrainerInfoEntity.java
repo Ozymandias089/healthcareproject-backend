@@ -64,22 +64,19 @@ public class TrainerInfoEntity extends BaseTimeEntity {
      * 실제 구조(JSON 스키마)는 서비스 레이어에서 관리한다.
      * </p>
      */
-    @Lob
-    @Column(name = "license_urls_json")
+    @Column(name = "license_urls_json", columnDefinition = "text")
     private String licenseUrlsJson;
 
     /**
      * 트레이너 소개 문구(Bio)
      */
-    @Lob
-    @Column(name = "bio")
+    @Column(name = "bio", columnDefinition = "text")
     private String bio;
 
     /**
      * 관리자 거절 사유
      */
-    @Lob
-    @Column(name = "reject_reason")
+    @Column(name = "reject_reason", columnDefinition = "text")
     private String rejectReason;
 
     /**

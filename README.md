@@ -2,8 +2,8 @@
 
 Java Spring Boot 기반 헬스케어(운동/식단/커뮤니티/PT) 백엔드 프로젝트입니다.
 
-- 개발 환경: H2(In-Memory)
-- 운영 환경: Oracle DB(예정)
+- 개발 환경: H2(In-Memory, PostgreSQL 모드), Redis
+- 운영 환경: PostgreSQL(PSQL), Redis
 - 인증: JWT (principal = handle, details = userId)
 - 공통 응답 포맷: ApiResponse
 - 기능 단위 패키지 구조(auth / profile / trainer / calendar / pt / community ...)
@@ -13,16 +13,15 @@ Java Spring Boot 기반 헬스케어(운동/식단/커뮤니티/PT) 백엔드 �
 ## 스택
 
 - Language: Java 21
-- Framework: Spring Boot 3.5.x
+- Framework: Spring Boot 3.5.9
 - Security: Spring Security
-- Data: Spring Data JPA, H2(개발), Oracle(운영 예정)
+- Data: Spring Data JPA, H2(개발, PostgreSQL 모드), PostgreSQL 18.1
 - Cache: Redis
 - Auth: JWT (jjwt)
 - Messaging: Spring Mail (SMTP)
 - Cloud: AWS SDK (S3)
 - AI: Spring AI OpenAI Starter
 - Build: Gradle
-- Test: JUnit 5, Spring Security Test
 
 ---
 
@@ -43,9 +42,9 @@ Java Spring Boot 기반 헬스케어(운동/식단/커뮤니티/PT) 백엔드 �
 ## 메뉴얼
 
 ### 환경 변수/설정
-- 개발 환경은 H2를 사용합니다.
+- 개발 환경은 H2(In-Memory, PostgreSQL 모드)를 사용합니다.
+- 운영 환경은 PostgreSQL(PSQL)을 사용합니다.
 - `app.jwt.secret`는 최소 32자 이상을 권장합니다.
-- 운영 환경 전환 시 Oracle 접속 정보 및 DDL 전략을 조정하세요.
 
 ### 테스트
 
@@ -62,6 +61,19 @@ Java Spring Boot 기반 헬스케어(운동/식단/커뮤니티/PT) 백엔드 �
 ### 로컬 H2 확인
 - H2 Console URL: `/h2-console`
 - JDBC URL: `jdbc:h2:mem:testdb`
+
+### DB 마이그레이션 (Flyway)
+- 운영 환경(`prod`)에서 Flyway가 활성화됩니다.
+- 앱 시작 시 마이그레이션이 자동 실행됩니다.
+- 마이그레이션 파일 위치: `src/main/resources/db/migration`
+- 예시 파일: `V1__init_schema.sql`, `V2__add_foreign_keys.sql`, `V3__add_indexes.sql`
+- 운영 실행 시 `SPRING_PROFILES_ACTIVE=prod`로 프로필을 지정하세요.
+
+#### 운영 가이드
+- **배포 순서**: DB 백업 → 앱 배포(마이그레이션 자동 실행) → 앱 정상 동작 확인
+- **Rollback 전략**: Flyway는 자동 rollback을 제공하지 않으므로, 실패 시 DB 백업 복구 또는 수동 down 스크립트로 대응합니다.
+- **Baseline 적용 시점**: 이미 운영 중인 DB에 Flyway를 처음 도입하는 경우, 현재 스키마를 기준으로 `baseline-on-migrate`를 사용합니다.
+- **마이그레이션 원칙**: 운영에서는 수정/삭제 대신 새 버전으로 변경 사항을 추가하세요(예: `V4__add_column...`).
 
 ---
 
@@ -200,4 +212,3 @@ public class MeController {
 | **김주영** | [@juyoungck](https://github.com/juyoungck)         | Frontend PM  | UI, UX, API integration                                                                                                                     |
 | **박중건** | [@qkrwndrjs613](https://github.com/qkrwndrjs613)   | Frontend     | UI, UX, API integration                                                                                                                     |
 | **백승진** | [@SeungjinB](https://github.com/SeungjinB)         | Frontend     | UI, UX, API integration                                                                                                                     |
-

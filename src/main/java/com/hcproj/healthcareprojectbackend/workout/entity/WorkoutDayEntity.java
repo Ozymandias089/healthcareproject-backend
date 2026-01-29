@@ -50,8 +50,7 @@ public class WorkoutDayEntity extends BaseTimeEntity {
     @Column(name = "total_minutes", nullable = false)
     private Integer totalMinutes;
 
-    @Lob
-    @Column(name = "title", nullable = false)
+    @Column(name = "title", length = 255, nullable = false)
     private String title;
 
     public void replaceTitle(String title) {

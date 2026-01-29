@@ -48,8 +48,7 @@ public class PtRoomEntity extends BaseTimeEntity {
     @Column(name = "title", nullable = false, length = 200)
     private String title;
 
-    @Lob
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "text")
     private String description;
 
     @Enumerated(EnumType.STRING)

@@ -1,4 +1,4 @@
-package com.hcproj.healthcareprojectbackend.pt.bootstrap;
+package com.hcproj.healthcareprojectbackend.global.bootstrap;
 
 import com.hcproj.healthcareprojectbackend.pt.service.PtJanusKeyPoolInitService;
 import lombok.RequiredArgsConstructor;

@@ -45,8 +45,7 @@ public class CommentEntity extends BaseTimeEntity {
     @Column(name = "parent_comment_id")
     private Long parentCommentId;
 
-    @Lob
-    @Column(name = "content", nullable = false)
+    @Column(name = "content", columnDefinition = "text", nullable = false)
     private String content;
 
     @Enumerated(EnumType.STRING)

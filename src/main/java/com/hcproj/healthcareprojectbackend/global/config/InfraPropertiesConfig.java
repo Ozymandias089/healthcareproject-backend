@@ -1,5 +1,6 @@
 package com.hcproj.healthcareprojectbackend.global.config;
 
+import com.hcproj.healthcareprojectbackend.global.config.properties.BootstrapAdminProperties;
 import com.hcproj.healthcareprojectbackend.global.config.properties.ResetPasswordProperties;
 import com.hcproj.healthcareprojectbackend.global.config.properties.VerificationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -23,5 +24,5 @@ import org.springframework.context.annotation.Configuration;
  * </ul>
  */
 @Configuration
-@EnableConfigurationProperties({VerificationProperties.class, ResetPasswordProperties.class})
+@EnableConfigurationProperties({VerificationProperties.class, ResetPasswordProperties.class, BootstrapAdminProperties.class})
 public class InfraPropertiesConfig {}
