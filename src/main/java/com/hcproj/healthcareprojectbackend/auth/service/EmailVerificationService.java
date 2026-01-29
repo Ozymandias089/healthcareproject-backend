@@ -5,6 +5,7 @@ import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
 import com.hcproj.healthcareprojectbackend.global.mail.port.EmailSender;
+import com.hcproj.healthcareprojectbackend.global.mail.template.EmailTemplateLoader;
 import com.hcproj.healthcareprojectbackend.global.store.verification.VerificationStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.util.Map;
 
 import static com.hcproj.healthcareprojectbackend.global.util.UtilityProvider.normalizeEmail;
 
@@ -25,17 +27,16 @@ public class EmailVerificationService {
     private final UserRepository userRepository;
     private final VerificationStore verificationStore;
     private final EmailSender emailSender;
+    private final EmailTemplateLoader templateLoader;
 
     private final SecureRandom random = new SecureRandom();
 
     public void sendVerificationCode(String rawEmail) {
         String email = normalizeEmail(rawEmail);
 
-        // Cooldown
         boolean allowed = verificationStore.tryStartCooldown(email);
         if (!allowed) throw new BusinessException(ErrorCode.TOO_MANY_REQUESTS);
 
-        // 가입된 유저만 전송
         UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
 
@@ -43,20 +44,15 @@ public class EmailVerificationService {
 
         String code = generate6DigitCode();
         String hash = sha256Hex(code);
-
         verificationStore.saveEmailCodeHash(email, hash);
 
-        emailSender.send(
-                email,
-                "[HCProject] 이메일 인증 코드",
-                """
-                가입 이메일 인증을 진행해 주세요.
-
-                인증 코드: %s
-
-                본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.
-                """.formatted(code)
+        String html = templateLoader.render(
+                "mail/email-verify.html",
+                Map.of("code", code)
         );
+
+        // HTML로 전송
+        emailSender.sendHtml(email, "[HCProject] 이메일 인증 코드", html);
     }
 
     /** 인증 코드 확인 */

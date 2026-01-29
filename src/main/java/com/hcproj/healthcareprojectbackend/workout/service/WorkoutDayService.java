@@ -74,6 +74,7 @@ public class WorkoutDayService {
                             .name(exerciseName)
                             .restSeconds(item.getRestSecond())
                             .amount(item.getAmount())
+                            .rpe(item.getRpe())
                             .isChecked(item.getIsChecked())
                             .sortOrder(item.getSortOrder())
                             .build();

@@ -56,4 +56,5 @@ public interface WorkoutDayRepository extends JpaRepository<WorkoutDayEntity, Lo
             @Param("endDate") LocalDate endDate
     );
 
+    List<WorkoutDayEntity> findByUserIdAndLogDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
 }

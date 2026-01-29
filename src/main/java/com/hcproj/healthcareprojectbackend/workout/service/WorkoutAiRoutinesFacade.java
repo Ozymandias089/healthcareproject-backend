@@ -36,53 +36,65 @@ public class WorkoutAiRoutinesFacade {
     @Transactional
     public AiWorkoutRoutinesResponseDTO replaceRoutines(Long userId, AiWorkoutRoutinesPutRequestDTO req) {
 
-        // 1) 요청 시작일 + 7일 윈도우
-        LocalDate startDate = req.dates().stream().min(LocalDate::compareTo)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REQUEST));
+        // ✅ 정책: "오늘부터 7일(오늘 포함)" 윈도우
+        LocalDate startDate = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
         LocalDate endDate = startDate.plusDays(6);
 
-        // 2) 윈도우 안의 날짜만 유효 (정렬 + 중복 제거)
-        List<LocalDate> targetDates = req.dates().stream()
-                .filter(d -> !d.isBefore(startDate) && !d.isAfter(endDate))
+        // ✅ 요청 검증: dates 필수
+        List<LocalDate> requestedDates = req.dates();
+        if (requestedDates == null || requestedDates.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // ✅ 요청 검증: 모두 윈도우 안이어야 함 (조용히 필터링 X)
+        boolean hasOutOfWindow = requestedDates.stream()
+                .anyMatch(d -> d == null || d.isBefore(startDate) || d.isAfter(endDate));
+        if (hasOutOfWindow) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // ✅ 중복 제거 + 정렬
+        List<LocalDate> targetDates = requestedDates.stream()
                 .distinct()
                 .sorted()
                 .toList();
 
-        if (targetDates.isEmpty()) {
-            // 정책: 아무 것도 안 하면 에러가 더 낫다(클라 실수)
-            throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        }
+        // ✅ 윈도우 전체 Replace: 오늘~6일후에 해당하는 기존 데이터 싹 제거
+        deleteExistingInWindow(userId, startDate, endDate);
 
-        // 3) 기존 해당 날짜들만 삭제(Replace)
-        deleteExisting(userId, targetDates);
-
-        // 4) AI 호출 (allowedExercises whitelist 포함)
+        // ✅ AI 호출 (allowedExercises whitelist 포함)
         WorkoutAiService.Generated generated = workoutAiService.generate(targetDates, req.additionalRequest());
         WorkoutAiRoutineResult ai = generated.result();
 
-        // 5) 서버 검증 (exerciseId가 allowed 목록 안인지)
+        // ✅ 서버 검증 (exerciseId가 allowed 목록 안인지)
         Set<Long> allowedExerciseIds = generated.allowedPayload().allowedExercises().stream()
                 .map(WorkoutAiExerciseCatalogService.AllowedExerciseDTO::id)
                 .collect(Collectors.toSet());
         validateAiOutput(targetDates, ai, allowedExerciseIds);
 
-        // 6) insert
+        // ✅ insert
         Persisted persisted = persist(userId, ai);
 
-        // 7) 응답 조립 (exerciseName 조인 + dayOfWeek)
+        // ✅ 응답 조립
         return buildResponse(targetDates, ai, persisted);
     }
 
-    private void deleteExisting(Long userId, List<LocalDate> targetDates) {
-        List<WorkoutDayEntity> existing = workoutDayRepository.findByUserIdAndLogDateIn(userId, targetDates);
+
+    private void deleteExistingInWindow(Long userId, LocalDate startDate, LocalDate endDate) {
+        List<WorkoutDayEntity> existing = workoutDayRepository
+                .findByUserIdAndLogDateBetween(userId, startDate, endDate);
+
         if (existing.isEmpty()) return;
 
         List<Long> dayIds = existing.stream()
                 .map(WorkoutDayEntity::getWorkoutDayId)
                 .toList();
 
-        // 기존 항목만 삭제 (Day는 유지하고 persist에서 title 갱신 + item 재삽입)
+        // 1) items 삭제
         workoutItemRepository.deleteByWorkoutDayIdIn(dayIds);
+
+        // 2) days도 삭제 (권장: "목금월화만 남는다"를 보장)
+        workoutDayRepository.deleteAllByIdInBatch(dayIds);
     }
 
     private void validateAiOutput(List<LocalDate> targetDates, WorkoutAiRoutineResult ai, Set<Long> allowedIds) {
@@ -149,12 +161,6 @@ public class WorkoutAiRoutinesFacade {
         // 3) 날짜 -> dayId 매핑
         Map<LocalDate, Long> dateToDayId = savedDays.stream()
                 .collect(Collectors.toMap(WorkoutDayEntity::getLogDate, WorkoutDayEntity::getWorkoutDayId));
-
-        // 4) 해당 day들의 item 전부 삭제(덮어쓰기)
-        List<Long> dayIds = savedDays.stream()
-                .map(WorkoutDayEntity::getWorkoutDayId)
-                .toList();
-        workoutItemRepository.deleteByWorkoutDayIdIn(dayIds);
 
         // 5) item 재삽입
         List<WorkoutItemEntity> itemEntities = new ArrayList<>();

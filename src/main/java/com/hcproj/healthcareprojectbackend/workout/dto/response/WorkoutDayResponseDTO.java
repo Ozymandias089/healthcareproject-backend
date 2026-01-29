@@ -21,6 +21,7 @@ public record WorkoutDayResponseDTO(
             String name,
             Integer restSeconds,
             String amount,
+            Integer rpe,
             Boolean isChecked,
             Integer sortOrder
     ) {}
