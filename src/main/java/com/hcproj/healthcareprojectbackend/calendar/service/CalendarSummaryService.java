@@ -55,7 +55,7 @@ public class CalendarSummaryService {
 
     // ==================== Range Validation ====================
 
-    private static final int MAX_RANGE_DAYS = 35;
+    private static final int MAX_RANGE_DAYS = 42;
 
     private void validateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
