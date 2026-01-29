@@ -24,7 +24,7 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
     long countByStatus(PtRoomStatus status);
 
     // ============================================================
-    // 목록 조회 - 기존 JPQL 유지 (Admin 등에서 사용)
+    // 목록 조회 - 기존 JPQL 유지 (다른 곳에서 사용 가능)
     // ============================================================
     @Query("""
         SELECT DISTINCT p
@@ -156,6 +156,76 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
             @Param("roomIds") List<Long> roomIds,
             @Param("keyword") String keyword,
             @Param("limitSize") int limitSize
+    );
+
+    // ============================================================
+    // 어드민용 PT 방 목록 조회 - 검색어 없음
+    // ============================================================
+    @Query(value = "SELECT DISTINCT p.* FROM pt_rooms p " +
+            "JOIN users u ON u.user_id = p.trainer_id " +
+            "WHERE (:status IS NULL OR p.status = :status) " +
+            "AND (:trainerId IS NULL OR p.trainer_id = :trainerId) " +
+            "ORDER BY p.created_at DESC " +
+            "OFFSET :offsetSize ROWS FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<PtRoomEntity> findAdminPtRoomsNoKeyword(
+            @Param("status") String status,
+            @Param("trainerId") Long trainerId,
+            @Param("limitSize") int limitSize,
+            @Param("offsetSize") int offsetSize
+    );
+
+    // ============================================================
+    // 어드민용 PT 방 목록 조회 - 검색어 있음 (띄어쓰기 무시)
+    // ============================================================
+    @Query(value = "SELECT DISTINCT p.* FROM pt_rooms p " +
+            "JOIN users u ON u.user_id = p.trainer_id " +
+            "WHERE (:status IS NULL OR p.status = :status) " +
+            "AND (:trainerId IS NULL OR p.trainer_id = :trainerId) " +
+            "AND (" +
+            "  REPLACE(LOWER(p.title), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.nickname), ' ', '') LIKE :keyword " +
+            ") " +
+            "ORDER BY p.created_at DESC " +
+            "OFFSET :offsetSize ROWS FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<PtRoomEntity> findAdminPtRoomsWithKeyword(
+            @Param("status") String status,
+            @Param("trainerId") Long trainerId,
+            @Param("keyword") String keyword,
+            @Param("limitSize") int limitSize,
+            @Param("offsetSize") int offsetSize
+    );
+
+    // ============================================================
+    // 어드민용 PT 방 개수 - 검색어 없음
+    // ============================================================
+    @Query(value = "SELECT COUNT(DISTINCT p.pt_room_id) FROM pt_rooms p " +
+            "JOIN users u ON u.user_id = p.trainer_id " +
+            "WHERE (:status IS NULL OR p.status = :status) " +
+            "AND (:trainerId IS NULL OR p.trainer_id = :trainerId)",
+            nativeQuery = true)
+    long countAdminPtRoomsNoKeyword(
+            @Param("status") String status,
+            @Param("trainerId") Long trainerId
+    );
+
+    // ============================================================
+    // 어드민용 PT 방 개수 - 검색어 있음 (띄어쓰기 무시)
+    // ============================================================
+    @Query(value = "SELECT COUNT(DISTINCT p.pt_room_id) FROM pt_rooms p " +
+            "JOIN users u ON u.user_id = p.trainer_id " +
+            "WHERE (:status IS NULL OR p.status = :status) " +
+            "AND (:trainerId IS NULL OR p.trainer_id = :trainerId) " +
+            "AND (" +
+            "  REPLACE(LOWER(p.title), ' ', '') LIKE :keyword " +
+            "  OR REPLACE(LOWER(u.nickname), ' ', '') LIKE :keyword " +
+            ")",
+            nativeQuery = true)
+    long countAdminPtRoomsWithKeyword(
+            @Param("status") String status,
+            @Param("trainerId") Long trainerId,
+            @Param("keyword") String keyword
     );
 
     // ============================================================

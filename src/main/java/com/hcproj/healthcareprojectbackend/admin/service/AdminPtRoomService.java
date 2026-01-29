@@ -15,12 +15,9 @@ import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomEntity;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomStatus;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +41,7 @@ public class AdminPtRoomService {
      * @param trainerHandle 트레이너 핸들 필터
      * @param page          페이지 번호
      * @param size          한 페이지당 개수
+     * @param query         검색어
      * @return PT 방 목록 응답 DTO
      */
     @Transactional(readOnly = true)
@@ -55,13 +53,15 @@ public class AdminPtRoomService {
             String query
     ) {
         // 1) 상태 필터 변환
-        List<PtRoomStatus> statusFilter = null;
+        String statusParam = null;
         if (status != null && !status.isBlank()) {
             try {
-                statusFilter = List.of(PtRoomStatus.valueOf(status.toUpperCase()));
+                // 유효한 상태인지 확인
+                PtRoomStatus.valueOf(status.toUpperCase());
+                statusParam = status.toUpperCase();
             } catch (IllegalArgumentException e) {
                 // 잘못된 status 값은 무시 (전체 조회)
-                statusFilter = null;
+                statusParam = null;
             }
         }
 
@@ -80,25 +80,29 @@ public class AdminPtRoomService {
             }
         }
 
-        // 3) 페이지네이션 설정
-        Pageable pageable = PageRequest.of(page, size);
+        // 3) 검색어 정규화
+        String normalizedKeyword = normalizeKeyword(query);
 
-        // 4) PT 방 조회 (커서 기반이 아닌 페이지 기반으로 변환)
-        List<PtRoomEntity> rooms = ptRoomRepository.findPtRoomsByFilters(
-                null,           // cursorId (페이지 기반이므로 null)
-                statusFilter,   // statuses
-                trainerId,      // trainerId
-                null,           // roomIds
-                query,
-                pageable
-        );
+        // 4) 페이지네이션 설정
+        int offsetSize = page * size;
 
-        // 5) 전체 개수 조회
-        long total = ptRoomRepository.count();
-        if (statusFilter != null || trainerId != null) {
-            // 필터가 있으면 별도로 카운트 (간단히 전체 조회 후 필터링된 결과 수로 대체)
-            // 더 정확한 카운트가 필요하면 별도 count 쿼리 추가 필요
-            total = rooms.size();
+        // 5) 조회 (검색어 유무에 따라 분기)
+        List<PtRoomEntity> rooms;
+        long total;
+
+        if (normalizedKeyword == null) {
+            // 검색어 없음
+            rooms = ptRoomRepository.findAdminPtRoomsNoKeyword(
+                    statusParam, trainerId, size, offsetSize
+            );
+            total = ptRoomRepository.countAdminPtRoomsNoKeyword(statusParam, trainerId);
+        } else {
+            // 검색어 있음 - 띄어쓰기 제거 + 소문자 변환 + 와일드카드 추가
+            String likePattern = "%" + normalizedKeyword.toLowerCase().replace(" ", "") + "%";
+            rooms = ptRoomRepository.findAdminPtRoomsWithKeyword(
+                    statusParam, trainerId, likePattern, size, offsetSize
+            );
+            total = ptRoomRepository.countAdminPtRoomsWithKeyword(statusParam, trainerId, likePattern);
         }
 
         // 6) 트레이너 정보 조회
@@ -169,12 +173,12 @@ public class AdminPtRoomService {
 
         List<ReportEntity> pendingReports = reportRepository.findByTargetIdAndTypeAndStatus(
                 ptRoomId,
-                ReportType.PT_ROOM, // ★ 타입 주의: 화상 PT이므로 PT_ROOM 사용
+                ReportType.PT_ROOM,
                 ReportStatus.PENDING
         );
 
         for (ReportEntity report : pendingReports) {
-            report.process(); // 신고 상태를 PROCESSED로 변경
+            report.process();
         }
 
         // 4) 저장
@@ -187,5 +191,14 @@ public class AdminPtRoomService {
                 .message("관리자에 의해 중지된 화상 PT입니다.")
                 .closedAt(savedRoom.getDeletedAt())
                 .build();
+    }
+
+    /**
+     * 검색어 정규화 (null/빈값 처리)
+     */
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null) return null;
+        String trimmed = keyword.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

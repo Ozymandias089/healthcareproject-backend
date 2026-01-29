@@ -24,16 +24,15 @@ public class FoodService {
     private final FoodRepository foodRepository;
     private static final int DEFAULT_LIMIT = 20;
     private static final int MAX_LIMIT = 50;
+
     /**
      * 음식 상세 조회.
      */
     @Transactional(readOnly = true)
     public FoodDetailResponseDTO getFoodDetail(Long foodId) {
-        // 1. 음식 조회 (활성화된 음식만)
         FoodEntity food = foodRepository.findByFoodIdAndIsActiveTrue(foodId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FOOD_NOT_FOUND));
 
-        // 2. DTO 변환 후 반환
         return new FoodDetailResponseDTO(
                 food.getFoodId(),
                 food.getName(),
@@ -42,34 +41,43 @@ public class FoodService {
                 food.getNutritionUnit(),
                 food.getNutritionAmount(),
                 food.getCarbs(),
-                food.getProtein(),   // Entity는 protein, 응답은 proteins
-                food.getFat()        // Entity는 fat, 응답은 fats
+                food.getProtein(),
+                food.getFat()
         );
     }
+
     /**
-     * 음식 리스트 조회 (무한 스크롤 + 검색).
+     * 음식 리스트 조회 (무한 스크롤 + 검색 + 띄어쓰기 무시).
      */
     @Transactional(readOnly = true)
     public FoodListResponseDTO getFoodList(Long cursor, Integer limit, String keyword) {
         // 1. limit 유효성 검사
         int actualLimit = (limit == null || limit <= 0) ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        int limitSize = actualLimit + 1; // hasNext 판단용
 
-        // 2. limit + 1개 조회 (hasNext 판단용)
-        List<FoodEntity> entities = foodRepository.findFoodsWithCursor(
-                cursor,
-                keyword,
-                actualLimit + 1
-        );
+        // 2. 검색어 정규화
+        String normalizedKeyword = normalizeKeyword(keyword);
 
-        // 3. hasNext 판단
+        // 3. 조회 (검색어 유무에 따라 분기)
+        List<FoodEntity> entities;
+        if (normalizedKeyword == null) {
+            // 검색어 없음
+            entities = foodRepository.findFoodsWithCursorNoKeyword(cursor, limitSize);
+        } else {
+            // 검색어 있음 - 띄어쓰기 제거 + 소문자 변환 + 와일드카드 추가
+            String likePattern = "%" + normalizedKeyword.toLowerCase().replace(" ", "") + "%";
+            entities = foodRepository.findFoodsWithCursorAndKeyword(cursor, likePattern, limitSize);
+        }
+
+        // 4. hasNext 판단
         boolean hasNext = entities.size() > actualLimit;
 
-        // 4. 실제 반환할 데이터 (limit개만)
+        // 5. 실제 반환할 데이터 (limit개만)
         List<FoodEntity> resultEntities = hasNext
                 ? entities.subList(0, actualLimit)
                 : entities;
 
-        // 5. DTO 변환
+        // 6. DTO 변환
         List<FoodListResponseDTO.FoodItemDTO> items = resultEntities.stream()
                 .map(entity -> new FoodListResponseDTO.FoodItemDTO(
                         entity.getFoodId(),
@@ -83,13 +91,14 @@ public class FoodService {
                 ))
                 .toList();
 
-        // 6. nextCursor 계산
+        // 7. nextCursor 계산
         Long nextCursor = hasNext && !resultEntities.isEmpty()
                 ? resultEntities.get(resultEntities.size() - 1).getFoodId()
                 : null;
 
         return new FoodListResponseDTO(items, nextCursor, hasNext);
     }
+
     /**
      * 음식 등록 (관리자 전용)
      */
@@ -122,6 +131,7 @@ public class FoodService {
                 .createdAt(saved.getCreatedAt())
                 .build();
     }
+
     /**
      * 음식 삭제 (관리자 전용)
      */
@@ -136,5 +146,15 @@ public class FoodService {
                 .foodId(foodId)
                 .message("음식이 삭제되었습니다.")
                 .build();
+    }
+
+    // ============================================================
+    // Private Helper Methods
+    // ============================================================
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null) return null;
+        String trimmed = keyword.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

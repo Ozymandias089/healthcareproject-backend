@@ -32,14 +32,11 @@ public class ExerciseService {
      */
     @Transactional(readOnly = true)
     public ExerciseDetailResponseDTO getExerciseDetail(Long exerciseId) {
-        // 1. 운동 조회 (활성화된 운동만)
         ExerciseEntity exercise = exerciseRepository.findByExerciseIdAndIsActiveTrue(exerciseId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.EXERCISE_NOT_FOUND));
 
-        // 2. 대체 운동 조회
         List<AlternativeExerciseDTO> alternatives = findAlternatives(exercise);
 
-        // 3. 응답 DTO 생성
         ExerciseDetailResponseDTO.ExerciseDTO exerciseDTO = new ExerciseDetailResponseDTO.ExerciseDTO(
                 exercise.getExerciseId(),
                 exercise.getName(),
@@ -77,30 +74,44 @@ public class ExerciseService {
     }
 
     /**
-     * 운동 리스트 조회 (무한 스크롤 + 검색 + 필터).
+     * 운동 리스트 조회 (무한 스크롤 + 검색 + 필터 + 띄어쓰기 무시).
      */
     @Transactional(readOnly = true)
     public ExerciseListResponseDTO getExerciseList(Long cursor, Integer limit, String keyword, String bodyPart) {
         // 1. limit 유효성 검사
         int actualLimit = (limit == null || limit <= 0) ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        int limitSize = actualLimit + 1; // hasNext 판단용
 
-        // 2. limit + 1개 조회 (hasNext 판단용)
-        List<ExerciseEntity> entities = exerciseRepository.findExercisesWithCursor(
-                cursor,
-                keyword,
-                bodyPart,
-                actualLimit + 1
-        );
+        // 2. 검색어 정규화
+        String normalizedKeyword = normalizeKeyword(keyword);
 
-        // 3. hasNext 판단
+        // 3. bodyPart 정규화
+        String normalizedBodyPart = normalizeBodyPart(bodyPart);
+
+        // 4. 조회 (검색어 유무에 따라 분기)
+        List<ExerciseEntity> entities;
+        if (normalizedKeyword == null) {
+            // 검색어 없음
+            entities = exerciseRepository.findExercisesWithCursorNoKeyword(
+                    cursor, normalizedBodyPart, limitSize
+            );
+        } else {
+            // 검색어 있음 - 띄어쓰기 제거 + 소문자 변환 + 와일드카드 추가
+            String likePattern = "%" + normalizedKeyword.toLowerCase().replace(" ", "") + "%";
+            entities = exerciseRepository.findExercisesWithCursorAndKeyword(
+                    cursor, likePattern, normalizedBodyPart, limitSize
+            );
+        }
+
+        // 5. hasNext 판단
         boolean hasNext = entities.size() > actualLimit;
 
-        // 4. 실제 반환할 데이터 (limit개만)
+        // 6. 실제 반환할 데이터 (limit개만)
         List<ExerciseEntity> resultEntities = hasNext
                 ? entities.subList(0, actualLimit)
                 : entities;
 
-        // 5. DTO 변환
+        // 7. DTO 변환
         List<ExerciseListResponseDTO.ExerciseItemDTO> items = resultEntities.stream()
                 .map(entity -> new ExerciseListResponseDTO.ExerciseItemDTO(
                         entity.getExerciseId(),
@@ -112,13 +123,14 @@ public class ExerciseService {
                 ))
                 .toList();
 
-        // 6. nextCursor 계산
+        // 8. nextCursor 계산
         Long nextCursor = hasNext && !resultEntities.isEmpty()
-                ? resultEntities.getLast().getExerciseId()
+                ? resultEntities.get(resultEntities.size() - 1).getExerciseId()
                 : null;
 
         return new ExerciseListResponseDTO(items, nextCursor, hasNext);
     }
+
     /**
      * 운동 등록 (관리자 전용)
      */
@@ -144,6 +156,7 @@ public class ExerciseService {
                 .createdAt(saved.getCreatedAt())
                 .build();
     }
+
     /**
      * 운동 삭제 (관리자 전용)
      */
@@ -159,5 +172,20 @@ public class ExerciseService {
                 .message("운동이 삭제되었습니다.")
                 .build();
     }
-}
 
+    // ============================================================
+    // Private Helper Methods
+    // ============================================================
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null) return null;
+        String trimmed = keyword.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeBodyPart(String bodyPart) {
+        if (bodyPart == null) return null;
+        String trimmed = bodyPart.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+}

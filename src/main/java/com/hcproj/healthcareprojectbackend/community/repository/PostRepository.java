@@ -111,24 +111,71 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
     );
 
     // ============================================================
-    // 기존 어드민 기능 유지
+    // 기존 통계 기능 유지
     // ============================================================
     long countByStatus(PostStatus status);
 
     long countByCreatedAtAfter(java.time.Instant startOfDay);
 
-    @Query("SELECT p FROM PostEntity p WHERE p.title LIKE %:keyword% OR p.content LIKE %:keyword%")
-    Page<PostEntity> findAdminPostList(
+    // ============================================================
+    // 어드민용 게시글 목록 조회 - 검색어 없음
+    // ============================================================
+    @Query(value = "SELECT * FROM posts p " +
+            "WHERE (:category IS NULL OR p.category = :category) " +
+            "AND (:status IS NULL OR p.status = :status) " +
+            "ORDER BY p.created_at DESC " +
+            "OFFSET :offsetSize ROWS FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<PostEntity> findAdminPostListNoKeyword(
             @Param("category") String category,
-            @Param("status") PostStatus status,
-            @Param("keyword") String keyword,
-            Pageable pageable
+            @Param("status") String status,
+            @Param("limitSize") int limitSize,
+            @Param("offsetSize") int offsetSize
     );
 
-    @Query("SELECT COUNT(p) FROM PostEntity p WHERE p.title LIKE %:keyword%")
-    long countAdminPostList(
+    // ============================================================
+    // 어드민용 게시글 목록 조회 - 검색어 있음 (띄어쓰기 무시)
+    // ============================================================
+    @Query(value = "SELECT * FROM posts p " +
+            "WHERE (:category IS NULL OR p.category = :category) " +
+            "AND (:status IS NULL OR p.status = :status) " +
+            "AND (REPLACE(LOWER(p.title), ' ', '') LIKE :keyword " +
+            "     OR REPLACE(LOWER(p.content), ' ', '') LIKE :keyword) " +
+            "ORDER BY p.created_at DESC " +
+            "OFFSET :offsetSize ROWS FETCH FIRST :limitSize ROWS ONLY",
+            nativeQuery = true)
+    List<PostEntity> findAdminPostListWithKeyword(
             @Param("category") String category,
-            @Param("status") PostStatus status,
+            @Param("status") String status,
+            @Param("keyword") String keyword,
+            @Param("limitSize") int limitSize,
+            @Param("offsetSize") int offsetSize
+    );
+
+    // ============================================================
+    // 어드민용 게시글 개수 - 검색어 없음
+    // ============================================================
+    @Query(value = "SELECT COUNT(*) FROM posts p " +
+            "WHERE (:category IS NULL OR p.category = :category) " +
+            "AND (:status IS NULL OR p.status = :status)",
+            nativeQuery = true)
+    long countAdminPostListNoKeyword(
+            @Param("category") String category,
+            @Param("status") String status
+    );
+
+    // ============================================================
+    // 어드민용 게시글 개수 - 검색어 있음 (띄어쓰기 무시)
+    // ============================================================
+    @Query(value = "SELECT COUNT(*) FROM posts p " +
+            "WHERE (:category IS NULL OR p.category = :category) " +
+            "AND (:status IS NULL OR p.status = :status) " +
+            "AND (REPLACE(LOWER(p.title), ' ', '') LIKE :keyword " +
+            "     OR REPLACE(LOWER(p.content), ' ', '') LIKE :keyword)",
+            nativeQuery = true)
+    long countAdminPostListWithKeyword(
+            @Param("category") String category,
+            @Param("status") String status,
             @Param("keyword") String keyword
     );
 }
