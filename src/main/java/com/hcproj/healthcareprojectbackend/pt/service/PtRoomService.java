@@ -17,6 +17,7 @@ import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantReposi
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
 import com.hcproj.healthcareprojectbackend.pt.service.manager.PtRoomParticipantManager;
 import com.hcproj.healthcareprojectbackend.trainer.repository.TrainerInfoRepository;
+import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest; // [Import 추가]
 import org.springframework.data.domain.Pageable; // [Import 추가]
@@ -49,8 +50,7 @@ public class PtRoomService {
 
     @Transactional
     public PtRoomDetailResponseDTO createRoom(Long userId, PtRoomCreateRequestDTO request) {
-        UserEntity trainer = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        UserEntity trainer = validateUserAndStatus(userId);
         String bio = trainerInfoRepository.findBioByTrainerId(trainer.getId()).orElse(null);
 
         if (request.roomType() == PtRoomType.RESERVED && request.scheduledAt() == null) {
@@ -92,6 +92,7 @@ public class PtRoomService {
 
     @Transactional
     public void joinRoom(Long ptRoomId, Long userId, PtRoomEntryRequestDTO request) {
+        validateUserAndStatus(userId);
         // ✅ 방 row 잠금 (정원 체크 동시성 방지)
         PtRoomEntity room = ptRoomRepository.findByIdForUpdate(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -153,6 +154,7 @@ public class PtRoomService {
 
     @Transactional
     public void deleteRoom(Long ptRoomId, Long userId) {
+        validateUserAndStatus(userId);
         // 삭제도 방 row 잠그면 “삭제 중 join” 같은 경쟁에 더 강함
         PtRoomEntity room = ptRoomRepository.findByIdForUpdate(ptRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -221,5 +223,15 @@ public class PtRoomService {
                 .maxParticipants(room.getMaxParticipants())
                 .participants(new PtRoomDetailResponseDTO.ParticipantsDTO(participantsList.size(), participantsList))
                 .build();
+    }
+    private UserEntity validateUserAndStatus(Long userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new BusinessException(ErrorCode.USER_SUSPENDED);
+        }
+
+        return user;
     }
 }
