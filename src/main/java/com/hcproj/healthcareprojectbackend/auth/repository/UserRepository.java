@@ -3,6 +3,7 @@ package com.hcproj.healthcareprojectbackend.auth.repository;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserRole;
 import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
+import com.hcproj.healthcareprojectbackend.trainer.entity.TrainerInfoEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,6 +29,13 @@ import java.util.Optional;
  * </p>
  */
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
+    interface TrainerProfileView {
+        String getNickname();
+        String getHandle();
+        String getProfileImageUrl();
+        String getBio();
+    }
+
     /** 이메일 중복 여부를 확인한다. */
     boolean existsByEmail(String email);
     /** 핸들 중복 여부를 확인한다. */
@@ -132,4 +140,18 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             @Param("role") String role,
             @Param("keyword") String keyword
     );
+
+    /**
+     * 트레이너 기본 정보 + 소개글을 한번에 조회한다.
+     */
+    @Query("""
+        select u.nickname as nickname,
+               u.handle as handle,
+               u.profileImageUrl as profileImageUrl,
+               t.bio as bio
+        from UserEntity u
+        left join TrainerInfoEntity t on t.userId = u.id
+        where u.id = :trainerId
+    """)
+    Optional<TrainerProfileView> findTrainerProfileById(@Param("trainerId") Long trainerId);
 }

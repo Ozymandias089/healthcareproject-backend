@@ -40,6 +40,7 @@ public class PtRoomListResponseDTO {
         private String nickname;
         private String handle;
         private String profileImageUrl;
+        private String bio;
     }
 
     @Getter
