@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.DeleteMapping;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/exercises")
@@ -32,9 +34,10 @@ public class ExerciseController {
             @RequestParam(required = false) Long cursor,
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String bodyPart
+            @RequestParam(required = false, name = "bodyPart") List<String> bodyParts,
+            @RequestParam(required = false, name = "difficulty") List<String> difficulties
     ) {
-        ExerciseListResponseDTO response = exerciseService.getExerciseList(cursor, limit, keyword, bodyPart);
+        ExerciseListResponseDTO response = exerciseService.getExerciseList(cursor, limit, keyword, bodyParts, difficulties);
         return ApiResponse.ok(response);
     }
 
