@@ -115,12 +115,15 @@ public class PostService {
         // 6. 작성자 정보 조회
         Map<Long, UserEntity> userMap = getUserMap(entities);
 
+        // 6-1. 댓글 수 조회
+        Map<Long, Long> commentCountMap = getCommentCountMap(entities);
+
         // 7. 다음 커서 ID
         Long nextCursorId = entities.isEmpty() ? null : entities.get(entities.size() - 1).getPostId();
 
         // 8. DTO 변환
         List<PostSummaryDto> dtos = entities.stream()
-                .map(entity -> toSummaryDto(entity, userMap))
+                .map(entity -> toSummaryDto(entity, userMap, commentCountMap))
                 .toList();
 
         return PostListResponseDTO.builder()
@@ -238,10 +241,28 @@ public class PostService {
                 .collect(Collectors.toMap(UserEntity::getId, u -> u));
     }
 
-    private PostSummaryDto toSummaryDto(PostEntity entity, Map<Long, UserEntity> userMap) {
+    private Map<Long, Long> getCommentCountMap(List<PostEntity> entities) {
+        List<Long> postIds = entities.stream()
+                .map(PostEntity::getPostId)
+                .distinct()
+                .toList();
+
+        if (postIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return commentRepository.countByPostIds(postIds).stream()
+                .collect(Collectors.toMap(
+                        CommentRepository.PostCommentCount::getPostId,
+                        CommentRepository.PostCommentCount::getCount
+                ));
+    }
+
+    private PostSummaryDto toSummaryDto(PostEntity entity, Map<Long, UserEntity> userMap, Map<Long, Long> commentCountMap) {
         UserEntity author = userMap.get(entity.getUserId());
         String nickname = (author != null) ? author.getNickname() : "알 수 없음";
         String handle = (author != null) ? author.getHandle() : "";
+        Long commentCount = commentCountMap.getOrDefault(entity.getPostId(), 0L);
 
         return new PostSummaryDto(
                 entity.getPostId(),
@@ -251,7 +272,7 @@ public class PostService {
                 nickname,
                 handle,
                 entity.getCreatedAt(),
-                0L,
+                commentCount,
                 entity.getViewCount(),
                 0L
         );

@@ -2,6 +2,8 @@ package com.hcproj.healthcareprojectbackend.community.repository;
 
 import com.hcproj.healthcareprojectbackend.community.entity.CommentEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 /**
@@ -13,6 +15,10 @@ import java.util.List;
  * </p>
  */
 public interface CommentRepository extends JpaRepository<CommentEntity, Long> {
+    interface PostCommentCount {
+        Long getPostId();
+        Long getCount();
+    }
     /**
      * 특정 게시글의 댓글 목록을 조회한다.
      *
@@ -27,4 +33,12 @@ public interface CommentRepository extends JpaRepository<CommentEntity, Long> {
 
     // [추가] 게시글 상세 조회 시 댓글 개수 카운트용 (PostService에서 사용)
     long countByPostId(Long postId);
+
+    @Query("""
+            select c.postId as postId, count(c) as count
+            from CommentEntity c
+            where c.postId in :postIds
+            group by c.postId
+            """)
+    List<PostCommentCount> countByPostIds(@Param("postIds") List<Long> postIds);
 }
