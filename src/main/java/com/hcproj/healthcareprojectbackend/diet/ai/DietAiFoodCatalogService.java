@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  *
  * <p><b>알레르기 필터 정책</b></p>
  * <ul>
- *   <li>{@code allergyCodes}는 CSV 문자열이므로, 서버에서 단순 부분 문자열 매칭으로 제외한다.</li>
+ *   <li>{@code allergies}는 CSV 문자열이므로, 서버에서 단순 부분 문자열 매칭으로 제외한다.</li>
  *   <li>여러 알레르기는 "하나라도 포함되면 제외"하는 방식으로 필터링한다.</li>
  * </ul>
  *

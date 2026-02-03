@@ -24,7 +24,7 @@ import java.math.BigDecimal;
  * <p><b>표시/운영 정책</b></p>
  * <ul>
  *   <li>{@code displayServing}: 사용자에게 보여줄 서빙 기준 설명</li>
- *   <li>{@code allergyCodes}: 알레르기 코드 목록(CSV 형태)</li>
+ *   <li>{@code allergies}: 알레르기 코드 목록(CSV 형태)</li>
  *   <li>{@code isActive}: 비활성 음식은 선택/검색 대상에서 제외 가능</li>
  * </ul>
  */
