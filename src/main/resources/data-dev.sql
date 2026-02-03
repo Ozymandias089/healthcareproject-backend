@@ -18,7 +18,9 @@ MERGE INTO users
     VALUES
     ('user1@test.com', 'user1', '$2a$10$dev...', '유저1', '010-0000-0001', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL),
     ('user2@test.com', 'user2', '$2a$10$dev...', '유저2', '010-0000-0002', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL),
-    ('user3@test.com', 'user3', '$2a$10$dev...', '유저3', '010-0000-0003', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL);
+    ('user3@test.com', 'user3', '$2a$10$dev...', '유저3', '010-0000-0003', 'USER', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL),
+    -- posts seed에서 admin을 참조하므로 dev에서도 admin 계정을 넣어둠
+    ('admin@test.com', 'admin', '$2a$10$dev...', '관리자', '010-9999-9999', 'ADMIN', 'ACTIVE', NULL, TRUE, NOW(), NOW(), NULL);
 
 -- =========================
 -- EXERCISES
@@ -46,42 +48,42 @@ VALUES
     ('데드리프트', 'https://images.unsplash.com/photo-1534368420009-621bfab424a8?w=400', '후면 사슬 전체를 발달시키는 운동입니다.', 'BACK', 'ADVANCED', '허리를 둥글게 말지 않도록 주의하세요.', 'https://www.youtube.com/watch?v=example18', TRUE, NOW());
 
 -- =========================
--- FOODS (Postgres, boolean)
+-- FOODS (DEV seed - IDENTITY 사용: FOOD_ID 넣지 않음)
 -- =========================
 INSERT INTO FOODS
-(FOOD_ID, NAME, CALORIES, CARBS, PROTEIN, FAT, NUTRITION_AMOUNT, NUTRITION_UNIT, DISPLAY_SERVING,
+(NAME, CALORIES, CARBS, PROTEIN, FAT, NUTRITION_AMOUNT, NUTRITION_UNIT, DISPLAY_SERVING,
  IS_ACTIVE, ALLERGY_CODES, IMAGE_URL, CREATED_AT, UPDATED_AT, DELETED_AT)
 VALUES
-    (1, '현미밥', 165, 34.5, 3.5, 1.2, 150, 'g', '1공기', TRUE, NULL, 'https://images.unsplash.com/photo-1516684732162-798a0062be99?w=300', NOW(), NOW(), NULL),
-    (2, '닭가슴살 구이', 165, 0, 31, 3.6, 100, 'g', '1조각', TRUE, NULL, 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=300', NOW(), NOW(), NULL),
-    (3, '계란 후라이', 90, 0.6, 6.3, 7, 50, 'g', '1개', TRUE, 'EGG', 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=300', NOW(), NOW(), NULL),
-    (4, '삶은 계란', 77, 0.6, 6.3, 5.3, 50, 'g', '1개', TRUE, 'EGG', 'https://images.unsplash.com/photo-1482049016gy498f-713b7a0e94be?w=300', NOW(), NOW(), NULL),
-    (5, '그릭요거트', 97, 3.6, 17.3, 0.7, 150, 'g', '1컵', TRUE, 'MILK', 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=300', NOW(), NOW(), NULL),
-    (6, '바나나', 93, 23.5, 1.1, 0.3, 100, 'g', '1개', TRUE, NULL, 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300', NOW(), NOW(), NULL),
-    (7, '사과', 57, 14.1, 0.2, 0.4, 100, 'g', '1개', TRUE, NULL, 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=300', NOW(), NOW(), NULL),
-    (8, '고구마', 128, 30, 1.4, 0.1, 100, 'g', '1개', TRUE, NULL, 'https://images.unsplash.com/photo-1596097635121-14b63a7a6c14?w=300', NOW(), NOW(), NULL),
-    (9, '오트밀', 150, 27, 5, 2.5, 40, 'g', '1회분', TRUE, 'WHEAT', 'https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=300', NOW(), NOW(), NULL),
-    (10, '연어 구이', 208, 0, 20, 13, 100, 'g', '1토막', TRUE, 'FISH', 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=300', NOW(), NOW(), NULL),
-    (11, '두부', 76, 1.9, 8, 4.2, 100, 'g', '반모', TRUE, 'SOY', 'https://images.unsplash.com/photo-1628689469838-524a4a973b8e?w=300', NOW(), NOW(), NULL),
-    (12, '닭볶음탕', 180, 8, 18, 8, 200, 'g', '1인분', TRUE, NULL, 'https://images.unsplash.com/photo-1635451595512-a6e5bd5e5dd2?w=300', NOW(), NOW(), NULL),
-    (13, '소고기 스테이크', 271, 0, 26, 18, 150, 'g', '1인분', TRUE, NULL, 'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=300', NOW(), NOW(), NULL),
-    (14, '삼겹살 구이', 518, 0, 15, 50, 150, 'g', '1인분', TRUE, NULL, 'https://images.unsplash.com/photo-1611489142329-5f62cfa43e6e?w=300', NOW(), NOW(), NULL),
-    (15, '김치찌개', 120, 6, 8, 7, 300, 'g', '1인분', TRUE, 'SOY,FISH', 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=300', NOW(), NOW(), NULL),
-    (16, '된장찌개', 100, 8, 6, 5, 300, 'g', '1인분', TRUE, 'SOY,FISH', 'https://images.unsplash.com/photo-1547592180-85f173990554?w=300', NOW(), NOW(), NULL),
-    (17, '샐러드', 35, 7, 2, 0.3, 150, 'g', '1접시', TRUE, NULL, 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300', NOW(), NOW(), NULL),
-    (18, '아보카도', 160, 8.5, 2, 14.7, 100, 'g', '반개', TRUE, NULL, 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=300', NOW(), NOW(), NULL),
-    (19, '프로틴 쉐이크', 120, 3, 24, 1.5, 30, 'g', '1스쿱', TRUE, 'MILK,SOY', 'https://images.unsplash.com/photo-1622485831930-6a3c1d742b33?w=300', NOW(), NOW(), NULL),
-    (20, '아몬드', 164, 6, 6, 14, 28, 'g', '한줌', TRUE, 'NUT', 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=300', NOW(), NOW(), NULL),
-    (21, '브로콜리', 34, 6.6, 2.8, 0.4, 100, 'g', '1컵', TRUE, NULL, 'https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=300', NOW(), NOW(), NULL),
-    (22, '시금치 나물', 45, 4, 3, 2, 100, 'g', '1접시', TRUE, NULL, 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=300', NOW(), NOW(), NULL),
-    (23, '참치 통조림', 130, 0, 28, 1, 100, 'g', '1캔', TRUE, 'FISH', 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=300', NOW(), NOW(), NULL),
-    (24, '우유', 65, 4.8, 3.2, 3.6, 200, 'ml', '1컵', TRUE, 'MILK', 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300', NOW(), NOW(), NULL),
-    (25, '치즈', 113, 0.4, 7, 9.3, 30, 'g', '1장', TRUE, 'MILK', 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=300', NOW(), NOW(), NULL),
-    (26, '잡곡밥', 175, 36, 4, 1.5, 150, 'g', '1공기', TRUE, NULL, 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?w=300', NOW(), NOW(), NULL),
-    (27, '콩나물국', 35, 3, 3, 1, 250, 'g', '1그릇', TRUE, 'SOY', 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300', NOW(), NOW(), NULL),
-    (28, '미역국', 45, 4, 2, 2, 250, 'g', '1그릇', TRUE, 'FISH', 'https://images.unsplash.com/photo-1569058242567-93de6f36f8eb?w=300', NOW(), NOW(), NULL),
-    (29, '새우 볶음', 140, 3, 20, 5, 100, 'g', '1접시', TRUE, 'SHELLFISH', 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=300', NOW(), NOW(), NULL),
-    (30, '오렌지', 47, 11.8, 0.9, 0.1, 100, 'g', '1개', TRUE, NULL, 'https://images.unsplash.com/photo-1547514701-42782101795e?w=300', NOW(), NOW(), NULL);
+    ('현미밥', 165, 34.5, 3.5, 1.2, 150, 'g', '1공기', TRUE, NULL, 'https://images.unsplash.com/photo-1516684732162-798a0062be99?w=300', NOW(), NOW(), NULL),
+    ('닭가슴살 구이', 165, 0, 31, 3.6, 100, 'g', '1조각', TRUE, NULL, 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=300', NOW(), NOW(), NULL),
+    ('계란 후라이', 90, 0.6, 6.3, 7, 50, 'g', '1개', TRUE, 'EGG', 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=300', NOW(), NOW(), NULL),
+    ('삶은 계란', 77, 0.6, 6.3, 5.3, 50, 'g', '1개', TRUE, 'EGG', 'https://images.unsplash.com/photo-1482049016gy498f-713b7a0e94be?w=300', NOW(), NOW(), NULL),
+    ('그릭요거트', 97, 3.6, 17.3, 0.7, 150, 'g', '1컵', TRUE, 'MILK', 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=300', NOW(), NOW(), NULL),
+    ('바나나', 93, 23.5, 1.1, 0.3, 100, 'g', '1개', TRUE, NULL, 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300', NOW(), NOW(), NULL),
+    ('사과', 57, 14.1, 0.2, 0.4, 100, 'g', '1개', TRUE, NULL, 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=300', NOW(), NOW(), NULL),
+    ('고구마', 128, 30, 1.4, 0.1, 100, 'g', '1개', TRUE, NULL, 'https://images.unsplash.com/photo-1596097635121-14b63a7a6c14?w=300', NOW(), NOW(), NULL),
+    ('오트밀', 150, 27, 5, 2.5, 40, 'g', '1회분', TRUE, 'WHEAT', 'https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=300', NOW(), NOW(), NULL),
+    ('연어 구이', 208, 0, 20, 13, 100, 'g', '1토막', TRUE, 'FISH', 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=300', NOW(), NOW(), NULL),
+    ('두부', 76, 1.9, 8, 4.2, 100, 'g', '반모', TRUE, 'SOY', 'https://images.unsplash.com/photo-1628689469838-524a4a973b8e?w=300', NOW(), NOW(), NULL),
+    ('닭볶음탕', 180, 8, 18, 8, 200, 'g', '1인분', TRUE, NULL, 'https://images.unsplash.com/photo-1635451595512-a6e5bd5e5dd2?w=300', NOW(), NOW(), NULL),
+    ('소고기 스테이크', 271, 0, 26, 18, 150, 'g', '1인분', TRUE, NULL, 'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=300', NOW(), NOW(), NULL),
+    ('삼겹살 구이', 518, 0, 15, 50, 150, 'g', '1인분', TRUE, NULL, 'https://images.unsplash.com/photo-1611489142329-5f62cfa43e6e?w=300', NOW(), NOW(), NULL),
+    ('김치찌개', 120, 6, 8, 7, 300, 'g', '1인분', TRUE, 'SOY,FISH', 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=300', NOW(), NOW(), NULL),
+    ('된장찌개', 100, 8, 6, 5, 300, 'g', '1인분', TRUE, 'SOY,FISH', 'https://images.unsplash.com/photo-1547592180-85f173990554?w=300', NOW(), NOW(), NULL),
+    ('샐러드', 35, 7, 2, 0.3, 150, 'g', '1접시', TRUE, NULL, 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300', NOW(), NOW(), NULL),
+    ('아보카도', 160, 8.5, 2, 14.7, 100, 'g', '반개', TRUE, NULL, 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=300', NOW(), NOW(), NULL),
+    ('프로틴 쉐이크', 120, 3, 24, 1.5, 30, 'g', '1스쿱', TRUE, 'MILK,SOY', 'https://images.unsplash.com/photo-1622485831930-6a3c1d742b33?w=300', NOW(), NOW(), NULL),
+    ('아몬드', 164, 6, 6, 14, 28, 'g', '한줌', TRUE, 'NUT', 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=300', NOW(), NOW(), NULL),
+    ('브로콜리', 34, 6.6, 2.8, 0.4, 100, 'g', '1컵', TRUE, NULL, 'https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=300', NOW(), NOW(), NULL),
+    ('시금치 나물', 45, 4, 3, 2, 100, 'g', '1접시', TRUE, NULL, 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=300', NOW(), NOW(), NULL),
+    ('참치 통조림', 130, 0, 28, 1, 100, 'g', '1캔', TRUE, 'FISH', 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=300', NOW(), NOW(), NULL),
+    ('우유', 65, 4.8, 3.2, 3.6, 200, 'ml', '1컵', TRUE, 'MILK', 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300', NOW(), NOW(), NULL),
+    ('치즈', 113, 0.4, 7, 9.3, 30, 'g', '1장', TRUE, 'MILK', 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=300', NOW(), NOW(), NULL),
+    ('잡곡밥', 175, 36, 4, 1.5, 150, 'g', '1공기', TRUE, NULL, 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?w=300', NOW(), NOW(), NULL),
+    ('콩나물국', 35, 3, 3, 1, 250, 'g', '1그릇', TRUE, 'SOY', 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300', NOW(), NOW(), NULL),
+    ('미역국', 45, 4, 2, 2, 250, 'g', '1그릇', TRUE, 'FISH', 'https://images.unsplash.com/photo-1569058242567-93de6f36f8eb?w=300', NOW(), NOW(), NULL),
+    ('새우 볶음', 140, 3, 20, 5, 100, 'g', '1접시', TRUE, 'SHELLFISH', 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=300', NOW(), NOW(), NULL),
+    ('오렌지', 47, 11.8, 0.9, 0.1, 100, 'g', '1개', TRUE, NULL, 'https://images.unsplash.com/photo-1547514701-42782101795e?w=300', NOW(), NOW(), NULL);
 
 -- =========================
 -- POSTS (no hard-coded user_id)
