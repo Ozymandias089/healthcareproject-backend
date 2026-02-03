@@ -4,6 +4,8 @@ import com.hcproj.healthcareprojectbackend.community.entity.ReportEntity;
 import com.hcproj.healthcareprojectbackend.community.entity.ReportStatus;
 import com.hcproj.healthcareprojectbackend.community.entity.ReportType;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -45,4 +47,10 @@ public interface ReportRepository extends JpaRepository<ReportEntity, Long> {
     boolean existsByReporterIdAndTargetIdAndType(Long reporterId, Long targetId, ReportType type);
 
     List<ReportEntity> findByTargetIdAndTypeAndStatus(Long targetId, ReportType type, ReportStatus status);
+
+    // [추가] 상태별 개수 (대기중인 신고 셀 때 사용)
+    long countByStatus(ReportStatus status);
+
+    // [추가] 특정 날짜 이후 생성된 개수 (오늘 들어온 신고 셀 때 사용)
+    long countByCreatedAtAfter(Instant startOfDay);
 }
