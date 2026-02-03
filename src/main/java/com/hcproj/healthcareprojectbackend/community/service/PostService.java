@@ -1,6 +1,7 @@
 package com.hcproj.healthcareprojectbackend.community.service;
 
 import com.hcproj.healthcareprojectbackend.auth.entity.UserEntity;
+import com.hcproj.healthcareprojectbackend.auth.entity.UserStatus;
 import com.hcproj.healthcareprojectbackend.auth.repository.UserRepository;
 import com.hcproj.healthcareprojectbackend.community.dto.request.PostCreateRequestDTO;
 import com.hcproj.healthcareprojectbackend.community.dto.request.PostUpdateRequestDTO;
@@ -35,8 +36,13 @@ public class PostService {
 
     @Transactional
     public void createPost(Long userId, PostCreateRequestDTO request) {
-        if (!userRepository.existsById(userId)) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        // 변경: existsById → findById로 변경하여 상태 체크
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 추가: 정지된 유저 체크
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new BusinessException(ErrorCode.USER_SUSPENDED);
         }
 
         PostEntity post = PostEntity.builder()
@@ -165,6 +171,14 @@ public class PostService {
 
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequestDTO request) {
+        // 추가: 유저 조회 및 정지 체크
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new BusinessException(ErrorCode.USER_SUSPENDED);
+        }
+
         PostEntity post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
