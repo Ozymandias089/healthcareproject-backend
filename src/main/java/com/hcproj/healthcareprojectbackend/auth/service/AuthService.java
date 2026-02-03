@@ -144,42 +144,39 @@ public class AuthService {
                 request.provider(), request.code(), request.redirectUri(), request.state()
         );
 
-        // 이메일 필수 (users.email NOT NULL + UNIQUE 정책)
+        // 0) 이메일 필수 정책
         if (profile.email() == null || profile.email().isBlank()) {
             throw new BusinessException(ErrorCode.SOCIAL_EMAIL_REQUIRED);
         }
 
-        String email = normalizeEmail(profile.email());
-        String nickname = (profile.nickname() == null || profile.nickname().isBlank())
-                ? "user"
-                : profile.nickname();
-
-        // 1) provider_user_id로 기존 연동 존재하면 -> 해당 user 로그인(필요 시 복구)
+        // 1) provider_user_id로 기존 연동 존재하면 -> 해당 user 로그인
         var existingLink = socialAccountRepository.findByProviderAndProviderUserId(
                 request.provider(), profile.providerUserId()
         );
 
         if (existingLink.isPresent()) {
             Long userId = existingLink.get().getUserId();
-
             UserEntity user = userRepository.findById(userId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-            // ✅ 탈퇴 상태면 "재가입(복구)" 처리
+            // ✅ 탈퇴/정지 등 로그인 불가 상태면 무조건 차단
             if (user.getStatus() == UserStatus.WITHDRAWN) {
-                user.reactivateFromSocial(nickname, profile.profileImageUrl());
-
-                // ✅ 과거 토큰 전부 무효화(강추: 재가입 순간 전체 로그아웃 효과)
-                tokenVersionStore.bump(user.getId());
-
-                userRepository.save(user);
+                throw new BusinessException(ErrorCode.ALREADY_WITHDRAWN);
             }
 
             return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
         }
 
-        // 2) provider_user_id 연동이 없으면 이메일 기준으로 유저 찾기(자동 연동 정책)
+        // 2) 이메일 기준으로 유저 찾기 (자동 연동 정책)
+        String email = normalizeEmail(profile.email());
         UserEntity user = userRepository.findByEmail(email).orElse(null);
+
+        // ✅ 기존 유저인데 탈퇴면 그냥 차단 (복구/재가입 없음)
+        if (user != null && user.getStatus() == UserStatus.WITHDRAWN) {
+            throw new BusinessException(ErrorCode.ALREADY_WITHDRAWN);
+        }
+
+        boolean nicknameBlank = (profile.nickname() == null || profile.nickname().isBlank());
 
         if (user == null) {
             // 신규 생성 (소셜 가입)
@@ -187,36 +184,16 @@ public class AuthService {
             user = UserEntity.socialRegister(
                     email,
                     handle,
-                    nickname,
+                    nicknameBlank ? "user" : profile.nickname(),
                     null,
                     profile.profileImageUrl()
             );
             user = userRepository.save(user);
-        } else {
-            // ✅ 기존 유저인데 탈퇴 상태면 "재가입(복구)"
-            if (user.getStatus() == UserStatus.WITHDRAWN) {
-                user.reactivateFromSocial(nickname, profile.profileImageUrl());
-
-                // ✅ 과거 토큰 전부 무효화
-                tokenVersionStore.bump(user.getId());
-
-                userRepository.save(user);
-            }
         }
 
-        // 3) 소셜 연결 저장
-        // - 혹시 과거에 같은 provider가 이미 연결되어 있었던 케이스(중복 저장) 방어
-        // - provider_user_id는 1명에게만 연결되어야 하므로, 연결되어 있으면 선점 오류 처리
-        var someoneHasThisProviderUser = socialAccountRepository.findByProviderAndProviderUserId(
-                request.provider(), profile.providerUserId()
-        );
-        if (someoneHasThisProviderUser.isPresent()
-                && !someoneHasThisProviderUser.get().getUserId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.SOCIAL_ACCOUNT_TAKEN);
-        }
-
-        boolean alreadyLinkedByThisUser = socialAccountRepository.existsByUserIdAndProvider(user.getId(), request.provider());
-        if (!alreadyLinkedByThisUser) {
+        // 3) 소셜 연결 저장 (중복이면 스킵)
+        boolean alreadyLinked = socialAccountRepository.existsByUserIdAndProvider(user.getId(), request.provider());
+        if (!alreadyLinked) {
             SocialAccountEntity link = SocialAccountEntity.connect(
                     user.getId(), request.provider(), profile.providerUserId()
             );
