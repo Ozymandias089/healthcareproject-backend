@@ -34,7 +34,7 @@ public class PostController {
     @GetMapping(path = "/{postId}", produces = "application/json")
     public ApiResponse<PostDetailResponseDTO> getPostDetail(
             @CurrentUserId Long userId, // [수정] 현재 로그인한 유저 ID를 받습니다.
-            @PathVariable("postId") Long postId
+            @PathVariable Long postId
     ) {
         // [수정] 서비스 호출 시 postId와 userId 두 개를 모두 전달합니다.
         return ApiResponse.ok(postService.getPostDetail(postId, userId));
@@ -42,7 +42,7 @@ public class PostController {
 
     /** 3. 게시글 작성 */
     @PostMapping(consumes = "application/json", produces = "application/json")
-    public ApiResponse<?> createPost(@CurrentUserId Long userId, @RequestBody PostCreateRequestDTO request) {
+    public ApiResponse<Void> createPost(@CurrentUserId Long userId, @RequestBody PostCreateRequestDTO request) {
         // 서비스가 void이므로 호출 후 null을 반환하여 에러 해결
         postService.createPost(userId, request);
         return ApiResponse.created(null);
@@ -50,9 +50,9 @@ public class PostController {
 
     /** 4. 게시글 수정 */
     @PatchMapping("/{postId}")
-    public ApiResponse<?> updatePost(
+    public ApiResponse<Void> updatePost(
             @CurrentUserId Long userId,
-            @PathVariable("postId") Long postId,
+            @PathVariable Long postId,
             @RequestBody PostUpdateRequestDTO request
     ) {
         postService.updatePost(userId, postId, request);
@@ -61,9 +61,9 @@ public class PostController {
 
     /** 5. 게시글 삭제 */
     @DeleteMapping("/{postId}")
-    public ApiResponse<?> deletePost(
+    public ApiResponse<Void> deletePost(
             @CurrentUserId Long userId,
-            @PathVariable("postId") Long postId
+            @PathVariable Long postId
     ) {
         postService.deletePost(userId, postId);
         return ApiResponse.ok(null);

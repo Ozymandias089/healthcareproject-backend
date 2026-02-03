@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.hcproj.healthcareprojectbackend.global.util.UtilityProvider.normalizeKeyword;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -219,12 +221,6 @@ public class PostService {
     // ============================================================
     // Private Helper Methods
     // ============================================================
-
-    private String normalizeKeyword(String q) {
-        if (q == null) return null;
-        String trimmed = q.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
 
     private String normalizeCategory(String category) {
         if (category == null) return null;

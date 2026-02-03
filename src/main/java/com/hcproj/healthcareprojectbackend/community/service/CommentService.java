@@ -13,11 +13,11 @@ import com.hcproj.healthcareprojectbackend.community.dto.response.PostResponseDT
 import com.hcproj.healthcareprojectbackend.community.dto.response.PostResponseDTO.CommentDTO;
 import com.hcproj.healthcareprojectbackend.community.entity.CommentEntity;
 import com.hcproj.healthcareprojectbackend.community.entity.CommentStatus;
-import com.hcproj.healthcareprojectbackend.community.entity.PostEntity;
 import com.hcproj.healthcareprojectbackend.community.repository.CommentRepository;
 import com.hcproj.healthcareprojectbackend.community.repository.PostRepository;
 import com.hcproj.healthcareprojectbackend.global.exception.BusinessException;
 import com.hcproj.healthcareprojectbackend.global.exception.ErrorCode;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,8 +51,7 @@ public class CommentService {
             throw new BusinessException(ErrorCode.USER_SUSPENDED);
         }
         // 2. 게시글 존재 확인
-        PostEntity post = postRepository.findById(postId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+        postRepository.existsById(postId);
 
         // 3. 부모 댓글 검증 (대댓글인 경우)
         Long parentId = null;
@@ -99,12 +98,7 @@ public class CommentService {
             throw new BusinessException(ErrorCode.USER_SUSPENDED);
         }
 
-        CommentEntity comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
-
-        if (!comment.getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        CommentEntity comment = getCommentEntity(userId, postId, commentId);
 
         // 이미 삭제된 댓글은 수정 불가
         if (comment.getStatus() == CommentStatus.DELETED) {
@@ -122,13 +116,7 @@ public class CommentService {
      */
     @Transactional
     public CommentDeleteResponseDTO deleteComment(Long userId, Long postId, Long commentId) {
-        CommentEntity comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
-
-        if (!comment.getUserId().equals(userId)) {
-            // 관리자라면 삭제 가능하게 할 수도 있음 (여기선 본인만)
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        CommentEntity comment = getCommentEntity(userId, postId, commentId);
 
         // 이미 삭제된 경우에도 에러 없이 성공 응답 (멱등성)
         if (comment.getStatus() != CommentStatus.DELETED) {
@@ -199,5 +187,17 @@ public class CommentService {
         }
 
         return roots;
+    }
+
+    private @NonNull CommentEntity getCommentEntity(Long userId, Long postId, Long commentId) {
+        CommentEntity comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (!comment.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        if (!comment.getPostId().equals(postId)) throw new BusinessException(ErrorCode.INVALID_INPUT);
+        return comment;
     }
 }

@@ -22,7 +22,7 @@ public class CommentController {
     @PostMapping("/posts/{postId}/comments")
     public ApiResponse<CommentCreateResponseDTO> createComment(
             @CurrentUserId Long userId,
-            @PathVariable("postId") Long postId,
+            @PathVariable Long postId,
             @RequestBody CommentCreateRequestDTO request
     ) {
         return ApiResponse.ok(commentService.createComment(userId, postId, request));
@@ -32,8 +32,8 @@ public class CommentController {
     @PatchMapping("/posts/{postId}/comments/{commentId}")
     public ApiResponse<CommentUpdateResponseDTO> updateComment(
             @CurrentUserId Long userId,
-            @PathVariable("postId") Long postId,
-            @PathVariable("commentId") Long commentId,
+            @PathVariable Long postId,
+            @PathVariable Long commentId,
             @RequestBody CommentUpdateRequestDTO request
     ) {
         return ApiResponse.ok(commentService.updateComment(userId, postId, commentId, request));
@@ -43,8 +43,8 @@ public class CommentController {
     @DeleteMapping("/posts/{postId}/comments/{commentId}")
     public ApiResponse<CommentDeleteResponseDTO> deleteComment(
             @CurrentUserId Long userId,
-            @PathVariable("postId") Long postId,
-            @PathVariable("commentId") Long commentId
+            @PathVariable Long postId,
+            @PathVariable Long commentId
     ) {
         return ApiResponse.ok(commentService.deleteComment(userId, postId, commentId));
     }
