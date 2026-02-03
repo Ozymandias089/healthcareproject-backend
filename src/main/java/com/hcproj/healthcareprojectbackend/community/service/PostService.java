@@ -171,6 +171,14 @@ public class PostService {
 
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequestDTO request) {
+        // 추가: 유저 조회 및 정지 체크
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new BusinessException(ErrorCode.USER_SUSPENDED);
+        }
+
         PostEntity post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 

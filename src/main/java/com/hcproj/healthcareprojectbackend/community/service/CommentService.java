@@ -91,6 +91,14 @@ public class CommentService {
      */
     @Transactional
     public CommentUpdateResponseDTO updateComment(Long userId, Long postId, Long commentId, CommentUpdateRequestDTO request) {
+        // 추가: 유저 조회 및 정지 체크
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new BusinessException(ErrorCode.USER_SUSPENDED);
+        }
+
         CommentEntity comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
