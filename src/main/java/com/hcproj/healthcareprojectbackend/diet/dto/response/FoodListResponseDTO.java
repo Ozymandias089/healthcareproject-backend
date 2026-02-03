@@ -12,7 +12,7 @@ public record FoodListResponseDTO(
             Long foodId,
             String name,
             String imageUrl,
-            String allergyCodes,
+            String allergies,
             Integer calories,
             BigDecimal carbs,
             BigDecimal protein,
