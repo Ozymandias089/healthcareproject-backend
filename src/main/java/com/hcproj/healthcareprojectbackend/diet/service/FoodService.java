@@ -34,17 +34,19 @@ public class FoodService {
         FoodEntity food = foodRepository.findByFoodIdAndIsActiveTrue(foodId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FOOD_NOT_FOUND));
 
-        return new FoodDetailResponseDTO(
-                food.getFoodId(),
-                food.getName(),
-                food.getImageUrl(),
-                food.getCalories(),
-                food.getNutritionUnit(),
-                food.getNutritionAmount(),
-                food.getCarbs(),
-                food.getProtein(),
-                food.getFat()
-        );
+        return FoodDetailResponseDTO.builder()
+                .foodId(food.getFoodId())
+                .name(food.getName())
+                .imageUrl(food.getImageUrl())
+                .allergies(food.getAllergyCodes())
+                .calories(food.getCalories())
+                .nutritionUnit(food.getNutritionUnit())
+                .nutritionAmount(food.getNutritionAmount())
+                .carbs(food.getCarbs())
+                .proteins(food.getProtein())
+                .fats(food.getFat())
+                .build();
+
     }
 
     /**
