@@ -1,10 +1,10 @@
 services:
   api:
     env_file:
-      - ../.env
-      - ../.env.prod
+      - /etc/myapp.env
+      - /etc/myapp.env.prod
 
   postgres:
     env_file:
-      - ../.env
-      - ../.env.prod
+      - /etc/myapp.env
+      - /etc/myapp.env.prod
