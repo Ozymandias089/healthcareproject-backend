@@ -11,6 +11,7 @@ import com.hcproj.healthcareprojectbackend.pt.entity.*;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtJanusRoomKeyRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomParticipantRepository;
 import com.hcproj.healthcareprojectbackend.pt.repository.PtRoomRepository;
+import com.hcproj.healthcareprojectbackend.trainer.entity.TrainerInfoEntity;
 import com.hcproj.healthcareprojectbackend.trainer.repository.TrainerInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.hcproj.healthcareprojectbackend.global.util.UtilityProvider.normalizeKeyword;
 
 @Service
 @RequiredArgsConstructor
@@ -32,21 +35,14 @@ public class PtRoomQueryService {
     private final TrainerInfoRepository trainerInfoRepository;
 
     public PtRoomDetailResponseDTO getPtRoomDetail(Long ptRoomId, Long currentUserId) {
-        PtRoomEntity ptRoom = ptRoomRepository.findById(ptRoomId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-
-        UserEntity trainer = userRepository.findById(ptRoom.getTrainerId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        String bio = trainerInfoRepository.findBioByTrainerId(trainer.getId()).orElse(null);
+        PtRoomEntity ptRoom = getRoomOrThrow(ptRoomId);
+        UserRepository.TrainerProfileView trainerProfile = loadTrainerProfile(ptRoom.getTrainerId());
 
         // JOINED 참가자만
         List<PtRoomParticipantEntity> activeParticipants = ptRoomParticipantRepository
                 .findAllByPtRoomIdAndStatusOrderByJoinedAtAsc(ptRoomId, PtParticipantStatus.JOINED);
 
-        List<Long> userIds = activeParticipants.stream().map(PtRoomParticipantEntity::getUserId).toList();
-        List<PtRoomDetailResponseDTO.UserDTO> userDTOs = userRepository.findAllById(userIds).stream()
-                .map(u -> new PtRoomDetailResponseDTO.UserDTO(u.getNickname(), u.getHandle()))
-                .toList();
+        List<PtRoomDetailResponseDTO.UserDTO> userDTOs = toDetailUsers(activeParticipants);
 
         // 트레이너 본인일 때만 entryCode 노출
         String entryCode = null;
@@ -64,7 +60,12 @@ public class PtRoomQueryService {
                 .title(ptRoom.getTitle())
                 .description(ptRoom.getDescription())
                 .scheduledAt(ptRoom.getScheduledStartAt())
-                .trainer(new PtRoomDetailResponseDTO.TrainerDTO(trainer.getNickname(), trainer.getHandle(), trainer.getProfileImageUrl(), bio))
+                .trainer(new PtRoomDetailResponseDTO.TrainerDTO(
+                        trainerProfile.getNickname(),
+                        trainerProfile.getHandle(),
+                        trainerProfile.getProfileImageUrl(),
+                        trainerProfile.getBio()
+                ))
                 .entryCode(entryCode)
                 .isPrivate(ptRoom.getIsPrivate())
                 .roomType(ptRoom.getRoomType())
@@ -76,40 +77,16 @@ public class PtRoomQueryService {
     }
 
     public PtRoomParticipantsResponseDTO getPtRoomParticipants(Long ptRoomId, Long userId) {
-        PtRoomEntity room = ptRoomRepository.findById(ptRoomId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        PtRoomEntity room = getRoomOrThrow(ptRoomId);
+        validateParticipantAccess(room, userId);
 
-        // 권한: 트레이너 OR 현재 JOINED인 유저만
-        boolean isTrainer = room.getTrainerId().equals(userId);
-        boolean isJoined = ptRoomParticipantRepository.existsByPtRoomIdAndUserIdAndStatus(ptRoomId, userId, PtParticipantStatus.JOINED);
-
-        if (!isTrainer && !isJoined) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
-        List<PtRoomParticipantEntity> participants = ptRoomParticipantRepository
-                .findAllByPtRoomIdAndStatusOrderByJoinedAtAsc(ptRoomId, PtParticipantStatus.JOINED);
-
-        List<Long> userIds = participants.stream().map(PtRoomParticipantEntity::getUserId).toList();
-        Map<Long, UserEntity> userMap = userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(UserEntity::getId, u -> u));
-
-        List<PtRoomParticipantsResponseDTO.UserDTO> userDTOs = participants.stream()
-                .map(p -> {
-                    UserEntity u = userMap.get(p.getUserId());
-                    if (u == null) return null;
-
-                    String role = room.getTrainerId().equals(u.getId()) ? "TRAINER" : "USER";
-
-                    return PtRoomParticipantsResponseDTO.UserDTO.builder()
-                            .handle(u.getHandle())
-                            .nickname(u.getNickname())
-                            .profileImageUrl(u.getProfileImageUrl())
-                            .role(role)
-                            .build();
-                })
-                .filter(Objects::nonNull)
-                .toList();
+        List<PtRoomParticipantEntity> participants = findJoinedParticipants(ptRoomId);
+        Map<Long, UserEntity> userMap = loadUsersByIds(
+                participants.stream().map(PtRoomParticipantEntity::getUserId).toList()
+        );
+        List<PtRoomParticipantsResponseDTO.UserDTO> userDTOs = toParticipantUsers(
+                participants, userMap, room.getTrainerId()
+        );
 
         return PtRoomParticipantsResponseDTO.builder()
                 .ptRoomId(room.getPtRoomId())
@@ -216,12 +193,6 @@ public class PtRoomQueryService {
     // Helper Methods
     // ============================================================
 
-    private String normalizeKeyword(String q) {
-        if (q == null) return null;
-        String trimmed = q.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
     private List<Long> getJoinedRoomIds(Long userId) {
         return ptRoomParticipantRepository.findAllByUserId(userId).stream()
                 .filter(p -> p.getStatus() == PtParticipantStatus.JOINED || p.getStatus() == PtParticipantStatus.LEFT)
@@ -231,35 +202,139 @@ public class PtRoomQueryService {
     }
 
     private PtRoomListResponseDTO assembleListResponse(List<PtRoomEntity> rooms, Long nextCursorId, boolean hasNext, int size) {
-        Set<Long> trainerIds = rooms.stream().map(PtRoomEntity::getTrainerId).collect(Collectors.toSet());
-        Map<Long, UserEntity> userMap = userRepository.findAllById(trainerIds).stream()
-                .collect(Collectors.toMap(UserEntity::getId, u -> u));
+        Map<Long, UserEntity> userMap = loadUsersByIds(
+                rooms.stream().map(PtRoomEntity::getTrainerId).distinct().toList()
+        );
+        Map<Long, TrainerInfoEntity> trainerMap = loadTrainerInfosByIds(
+                rooms.stream().map(PtRoomEntity::getTrainerId).distinct().toList()
+        );
+        Map<Long, Long> joinedCountMap = loadJoinedCountMap(
+                rooms.stream().map(PtRoomEntity::getPtRoomId).toList()
+        );
 
-        List<PtRoomListResponseDTO.ItemDTO> items = rooms.stream().map(r -> {
-            UserEntity trainer = userMap.get(r.getTrainerId());
-
-            int joinedCount = (int) ptRoomParticipantRepository.countByPtRoomIdAndStatus(r.getPtRoomId(), PtParticipantStatus.JOINED);
-
-            return PtRoomListResponseDTO.ItemDTO.builder()
-                    .ptRoomId(r.getPtRoomId())
-                    .title(r.getTitle())
-                    .roomType(r.getRoomType())
-                    .status(r.getStatus())
-                    .scheduledAt(r.getScheduledStartAt())
-                    .isPrivate(r.getIsPrivate())
-                    .trainer(new PtRoomListResponseDTO.TrainerDTO(
-                            trainer != null ? trainer.getNickname() : "알수없음",
-                            trainer != null ? trainer.getHandle() : "unknown",
-                            trainer != null ? trainer.getProfileImageUrl() : null
-                    ))
-                    .participants(new PtRoomListResponseDTO.ParticipantsDTO(joinedCount, r.getMaxParticipants()))
-                    .build();
-        }).toList();
+        List<PtRoomListResponseDTO.ItemDTO> items = rooms.stream()
+                .map(r -> toListItem(r, userMap, trainerMap, joinedCountMap))
+                .toList();
 
         return new PtRoomListResponseDTO(items, new PtRoomListResponseDTO.PageInfo(nextCursorId, hasNext, size));
     }
 
     private PtRoomListResponseDTO emptyResponse(int size) {
         return new PtRoomListResponseDTO(List.of(), new PtRoomListResponseDTO.PageInfo(null, false, size));
+    }
+
+    private PtRoomEntity getRoomOrThrow(Long ptRoomId) {
+        return ptRoomRepository.findById(ptRoomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    }
+
+    private UserRepository.TrainerProfileView loadTrainerProfile(Long trainerId) {
+        return userRepository.findTrainerProfileById(trainerId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private void validateParticipantAccess(PtRoomEntity room, Long userId) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        boolean isTrainer = room.getTrainerId().equals(userId);
+        boolean isJoined = ptRoomParticipantRepository.existsByPtRoomIdAndUserIdAndStatus(
+                room.getPtRoomId(), userId, PtParticipantStatus.JOINED
+        );
+        if (!isTrainer && !isJoined) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    private List<PtRoomParticipantEntity> findJoinedParticipants(Long ptRoomId) {
+        return ptRoomParticipantRepository
+                .findAllByPtRoomIdAndStatusOrderByJoinedAtAsc(ptRoomId, PtParticipantStatus.JOINED);
+    }
+
+    private Map<Long, UserEntity> loadUsersByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(UserEntity::getId, u -> u));
+    }
+
+    private Map<Long, TrainerInfoEntity> loadTrainerInfosByIds(List<Long> trainerIds) {
+        if (trainerIds == null || trainerIds.isEmpty()) {
+            return Map.of();
+        }
+        return trainerInfoRepository.findAllById(trainerIds).stream()
+                .collect(Collectors.toMap(TrainerInfoEntity::getUserId, u -> u));
+    }
+
+    private Map<Long, Long> loadJoinedCountMap(List<Long> roomIds) {
+        if (roomIds == null || roomIds.isEmpty()) {
+            return Map.of();
+        }
+        return ptRoomParticipantRepository.countByPtRoomIdsAndStatus(roomIds, PtParticipantStatus.JOINED).stream()
+                .collect(Collectors.toMap(
+                        PtRoomParticipantRepository.RoomCount::getPtRoomId,
+                        PtRoomParticipantRepository.RoomCount::getCount
+                ));
+    }
+
+    private List<PtRoomDetailResponseDTO.UserDTO> toDetailUsers(List<PtRoomParticipantEntity> participants) {
+        Map<Long, UserEntity> userMap = loadUsersByIds(
+                participants.stream().map(PtRoomParticipantEntity::getUserId).toList()
+        );
+        return participants.stream()
+                .map(p -> userMap.get(p.getUserId()))
+                .filter(Objects::nonNull)
+                .map(u -> new PtRoomDetailResponseDTO.UserDTO(u.getNickname(), u.getHandle()))
+                .toList();
+    }
+
+    private List<PtRoomParticipantsResponseDTO.UserDTO> toParticipantUsers(
+            List<PtRoomParticipantEntity> participants,
+            Map<Long, UserEntity> userMap,
+            Long trainerId
+    ) {
+        return participants.stream()
+                .map(p -> {
+                    UserEntity u = userMap.get(p.getUserId());
+                    if (u == null) return null;
+
+                    String role = trainerId.equals(u.getId()) ? "TRAINER" : "USER";
+                    return PtRoomParticipantsResponseDTO.UserDTO.builder()
+                            .handle(u.getHandle())
+                            .nickname(u.getNickname())
+                            .profileImageUrl(u.getProfileImageUrl())
+                            .role(role)
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private PtRoomListResponseDTO.ItemDTO toListItem(
+            PtRoomEntity room,
+            Map<Long, UserEntity> userMap,
+            Map<Long, TrainerInfoEntity> trainerMap,
+            Map<Long, Long> joinedCountMap
+    ) {
+        UserEntity trainer = userMap.get(room.getTrainerId());
+        TrainerInfoEntity trainerInfo = trainerMap.get(room.getTrainerId());
+        int joinedCount = joinedCountMap.getOrDefault(room.getPtRoomId(), 0L).intValue();
+
+        return PtRoomListResponseDTO.ItemDTO.builder()
+                .ptRoomId(room.getPtRoomId())
+                .title(room.getTitle())
+                .roomType(room.getRoomType())
+                .status(room.getStatus())
+                .scheduledAt(room.getScheduledStartAt())
+                .isPrivate(room.getIsPrivate())
+                .trainer(new PtRoomListResponseDTO.TrainerDTO(
+                        trainer != null ? trainer.getNickname() : "알수없음",
+                        trainer != null ? trainer.getHandle() : "unknown",
+                        trainer != null ? trainer.getProfileImageUrl() : null,
+                        trainer != null && trainerInfo != null ? trainerInfo.getBio() : null
+                ))
+                .participants(new PtRoomListResponseDTO.ParticipantsDTO(joinedCount, room.getMaxParticipants()))
+                .build();
     }
 }

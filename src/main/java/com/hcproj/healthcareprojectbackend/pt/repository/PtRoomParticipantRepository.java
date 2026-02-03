@@ -3,6 +3,8 @@ package com.hcproj.healthcareprojectbackend.pt.repository;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtParticipantStatus;
 import com.hcproj.healthcareprojectbackend.pt.entity.PtRoomParticipantEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +21,11 @@ import java.util.Optional;
  * </ul>
  */
 public interface PtRoomParticipantRepository extends JpaRepository<PtRoomParticipantEntity, Long> {
+    interface RoomCount {
+        Long getPtRoomId();
+        long getCount();
+    }
+
     /** 방/유저로 참가 레코드를 조회한다. */
     Optional<PtRoomParticipantEntity> findByPtRoomIdAndUserId(Long ptRoomId, Long userId);
 
@@ -35,6 +42,20 @@ public interface PtRoomParticipantRepository extends JpaRepository<PtRoomPartici
 
     /** 특정 방에서 특정 상태의 참가자 수를 반환한다(정원 체크 등). */
     long countByPtRoomIdAndStatus(Long ptRoomId, PtParticipantStatus status);
+
+    /**
+     * 여러 방의 특정 상태 참가자 수를 한번에 조회한다.
+     */
+    @Query("""
+        select p.ptRoomId as ptRoomId, count(p) as count
+        from PtRoomParticipantEntity p
+        where p.ptRoomId in :ptRoomIds and p.status = :status
+        group by p.ptRoomId
+    """)
+    List<RoomCount> countByPtRoomIdsAndStatus(
+            @Param("ptRoomIds") List<Long> ptRoomIds,
+            @Param("status") PtParticipantStatus status
+    );
 
     /** 특정 방에서 사용자가 특정 상태로 존재하는지 확인한다(중복 입장 방지 등). */
     boolean existsByPtRoomIdAndUserIdAndStatus(Long ptRoomId, Long userId, PtParticipantStatus status);
