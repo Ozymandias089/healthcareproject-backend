@@ -1,0 +1,10 @@
+services:
+  api:
+    env_file:
+      - ../.env
+      - ../.env.prod
+
+  postgres:
+    env_file:
+      - ../.env
+      - ../.env.prod

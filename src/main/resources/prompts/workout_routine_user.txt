@@ -1,0 +1,7 @@
+Generate workout routines.
+
+dates: %s
+additionalRequest: %s
+
+allowedExercises (JSON array). You MUST choose ONLY from this list:
+%s

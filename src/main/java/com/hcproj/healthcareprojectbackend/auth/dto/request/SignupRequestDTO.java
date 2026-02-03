@@ -7,5 +7,6 @@ public record SignupRequestDTO(
         @Email @NotBlank String email,
         @NotBlank String password,
         @NotBlank String nickname,
+        String phoneNumber,
         String profileImageUrl
 ) {}
