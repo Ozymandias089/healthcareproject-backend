@@ -17,12 +17,16 @@ public record AdminDashboardResponseDTO(
         // 3. 트레이너 신청 현황
         long waitTrainer,    // 승인 대기중
 
-        // 4. 화상 PT 현황
+        // 4. 신고 현황 (새로 추가!)
+        long waitReport,   // 처리 대기 중인 신고
+        long todayReport,  // 오늘 들어온 신고
+
+        // 5. 화상 PT 현황
         long totalPt,        // 전체
         long livePt,         // 진행중
         long reservedPt,     // 예약
 
-        // 5. 오늘의 활동
+        // 6. 오늘의 활동
         long todayJoin,       // 신규 가입
         long todayPost        // 오늘 새 게시글
 ) {}
