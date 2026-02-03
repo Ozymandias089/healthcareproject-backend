@@ -143,52 +143,85 @@ public class AuthService {
         SocialProfile profile = socialOAuthClient.fetchProfileByCode(
                 request.provider(), request.code(), request.redirectUri(), request.state()
         );
-        // 1) provider_user_id로 기존 연동 존재하면 -> 해당 user 로그인
+
+        // 이메일 필수 (users.email NOT NULL + UNIQUE 정책)
+        if (profile.email() == null || profile.email().isBlank()) {
+            throw new BusinessException(ErrorCode.SOCIAL_EMAIL_REQUIRED);
+        }
+
+        String email = normalizeEmail(profile.email());
+        String nickname = (profile.nickname() == null || profile.nickname().isBlank())
+                ? "user"
+                : profile.nickname();
+
+        // 1) provider_user_id로 기존 연동 존재하면 -> 해당 user 로그인(필요 시 복구)
         var existingLink = socialAccountRepository.findByProviderAndProviderUserId(
                 request.provider(), profile.providerUserId()
         );
 
         if (existingLink.isPresent()) {
             Long userId = existingLink.get().getUserId();
+
             UserEntity user = userRepository.findById(userId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-            if (user.getStatus() == UserStatus.WITHDRAWN) throw new BusinessException(ErrorCode.ALREADY_WITHDRAWN);
+            // ✅ 탈퇴 상태면 "재가입(복구)" 처리
+            if (user.getStatus() == UserStatus.WITHDRAWN) {
+                user.reactivateFromSocial(nickname, profile.profileImageUrl());
+
+                // ✅ 과거 토큰 전부 무효화(강추: 재가입 순간 전체 로그아웃 효과)
+                tokenVersionStore.bump(user.getId());
+
+                userRepository.save(user);
+            }
 
             return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
         }
 
-        // 2) 신규 가입 처리
-        // 정책: 소셜 가입에 이메일 필수로 할지? (지금 users.email not null + unique라서 사실상 필수)
-        if (profile.email() == null || profile.email().isBlank()) {
-            throw new BusinessException(ErrorCode.SOCIAL_EMAIL_REQUIRED);
-        }
-
-        String email = normalizeEmail(profile.email());
-
-        // 이메일이 이미 로컬/다른 소셜로 가입된 유저라면:
-        // 정책 선택지가 있음.
-        // A) 자동으로 그 유저에 "연동"으로 붙여준다 (권장)
-        // B) 충돌로 막고 프론트에 "로그인 후 연동하세요" 안내
-        // 여기서는 A(자동 연동)로 처리해볼게.
+        // 2) provider_user_id 연동이 없으면 이메일 기준으로 유저 찾기(자동 연동 정책)
         UserEntity user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {
+            // 신규 생성 (소셜 가입)
             String handle = UserEntity.newHandle();
             user = UserEntity.socialRegister(
                     email,
                     handle,
-                    // nickname은 provider 값이 비어있을 수 있으니 fallback을 두는게 안전
-                    (profile.nickname() == null || profile.nickname().isBlank()) ? "user" : profile.nickname(),
+                    nickname,
                     null,
                     profile.profileImageUrl()
             );
             user = userRepository.save(user);
+        } else {
+            // ✅ 기존 유저인데 탈퇴 상태면 "재가입(복구)"
+            if (user.getStatus() == UserStatus.WITHDRAWN) {
+                user.reactivateFromSocial(nickname, profile.profileImageUrl());
+
+                // ✅ 과거 토큰 전부 무효화
+                tokenVersionStore.bump(user.getId());
+
+                userRepository.save(user);
+            }
         }
 
-        // 3) 소셜 연결 저장 (중복/경합은 unique 제약이 잡아줌)
-        SocialAccountEntity link = SocialAccountEntity.connect(user.getId(), request.provider(), profile.providerUserId());
-        socialAccountRepository.save(link);
+        // 3) 소셜 연결 저장
+        // - 혹시 과거에 같은 provider가 이미 연결되어 있었던 케이스(중복 저장) 방어
+        // - provider_user_id는 1명에게만 연결되어야 하므로, 연결되어 있으면 선점 오류 처리
+        var someoneHasThisProviderUser = socialAccountRepository.findByProviderAndProviderUserId(
+                request.provider(), profile.providerUserId()
+        );
+        if (someoneHasThisProviderUser.isPresent()
+                && !someoneHasThisProviderUser.get().getUserId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.SOCIAL_ACCOUNT_TAKEN);
+        }
+
+        boolean alreadyLinkedByThisUser = socialAccountRepository.existsByUserIdAndProvider(user.getId(), request.provider());
+        if (!alreadyLinkedByThisUser) {
+            SocialAccountEntity link = SocialAccountEntity.connect(
+                    user.getId(), request.provider(), profile.providerUserId()
+            );
+            socialAccountRepository.save(link);
+        }
 
         return issueTokens(user.getId(), user.getHandle(), user.getRole().name());
     }

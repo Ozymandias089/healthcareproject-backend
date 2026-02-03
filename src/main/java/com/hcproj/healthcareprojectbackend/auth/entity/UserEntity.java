@@ -313,4 +313,18 @@ public class UserEntity extends BaseTimeEntity {
         if (this.status == newStatus) return; // 이미 같은 상태면 무시
         this.status = newStatus;
     }
+
+    // UserEntity
+    public void reactivateFromSocial(String nickname, String profileImageUrl) {
+        this.status = UserStatus.ACTIVE;
+        undoDeletion();
+
+        // 닉네임/프로필은 정책에 따라 갱신(원하면 조건부로만 갱신)
+        if (nickname != null && !nickname.isBlank()) this.nickname = nickname;
+        if (profileImageUrl != null && !profileImageUrl.isBlank()) this.profileImageUrl = profileImageUrl;
+
+        // 소셜로 재가입이면 이메일은 보통 검증된 것으로 취급
+        this.emailVerified = true;
+    }
+
 }
