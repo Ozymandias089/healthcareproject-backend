@@ -3,6 +3,10 @@ package com.hcproj.healthcareprojectbackend.global.util;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+
 /**
  * 애플리케이션 전역에서 사용하는 문자열 관련 유틸리티 클래스.
  *
@@ -69,9 +73,15 @@ public final class UtilityProvider {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-        public static String normalizeBodyPart(String bodyPart) {
-        if (bodyPart == null) return null;
-        String trimmed = bodyPart.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+    public static List<String> normalizeTokens(List<String> raw) {
+        if (raw == null) return null;
+
+        return raw.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .map(s -> s.replace(" ", "").toUpperCase(Locale.ROOT))
+                .distinct()
+                .toList();
     }
 }
