@@ -15,9 +15,6 @@ import java.util.Optional;
  */
 public interface ExerciseRepository extends JpaRepository<ExerciseEntity, Long> {
 
-    /** 활성화된 모든 운동 조회. */
-    List<ExerciseEntity> findAllByIsActiveTrue();
-
     /** 활성화된 운동 단건 조회 (상세 조회용) */
     Optional<ExerciseEntity> findByExerciseIdAndIsActiveTrue(Long exerciseId);
 
@@ -34,43 +31,43 @@ public interface ExerciseRepository extends JpaRepository<ExerciseEntity, Long> 
             @Param("excludeId") Long excludeId
     );
 
-    // ============================================================
-    // 커서 기반 운동 목록 조회 - 검색어 없음
-    // ============================================================
-    @Query(value = "SELECT * FROM exercises e " +
-            "WHERE e.is_active = true " +
-            "AND (:cursor IS NULL OR e.exercise_id > :cursor) " +
-            "AND (:bodyPart IS NULL OR e.body_part = :bodyPart) " +
-            "ORDER BY e.exercise_id ASC " +
-            "FETCH FIRST :limitSize ROWS ONLY",
-            nativeQuery = true)
-    List<ExerciseEntity> findExercisesWithCursorNoKeyword(
-            @Param("cursor") Long cursor,
-            @Param("bodyPart") String bodyPart,
-            @Param("limitSize") int limitSize
-    );
-
-    // ============================================================
-    // 커서 기반 운동 목록 조회 - 검색어 있음 (띄어쓰기 무시)
-    // ============================================================
-    @Query(value = "SELECT * FROM exercises e " +
-            "WHERE e.is_active = true " +
-            "AND (:cursor IS NULL OR e.exercise_id > :cursor) " +
-            "AND (:bodyPart IS NULL OR e.body_part = :bodyPart) " +
-            "AND REPLACE(LOWER(e.name), ' ', '') LIKE :keyword " +
-            "ORDER BY e.exercise_id ASC " +
-            "FETCH FIRST :limitSize ROWS ONLY",
-            nativeQuery = true)
-    List<ExerciseEntity> findExercisesWithCursorAndKeyword(
-            @Param("cursor") Long cursor,
-            @Param("keyword") String keyword,
-            @Param("bodyPart") String bodyPart,
-            @Param("limitSize") int limitSize
-    );
-
     /** 활성화된 운동 페이지 단위 조회. */
     List<ExerciseEntity> findByIsActiveTrue(Pageable pageable);
 
     /** 여러 운동 ID로 일괄 조회. */
     List<ExerciseEntity> findByExerciseIdIn(Collection<Long> ids);
+
+    @Query("""
+    select e
+    from ExerciseEntity e
+    where e.isActive = true
+      and (:cursor is null or e.exerciseId < :cursor)
+      and (:bodyParts is null or e.bodyPart in :bodyParts)
+      and (:difficulties is null or e.difficulty in :difficulties)
+    order by e.exerciseId desc
+""")
+    List<ExerciseEntity> findPageNoKeyword(
+            @Param("cursor") Long cursor,
+            @Param("bodyParts") List<String> bodyParts,
+            @Param("difficulties") List<String> difficulties,
+            Pageable pageable
+    );
+
+    @Query("""
+    select e
+    from ExerciseEntity e
+    where e.isActive = true
+      and (:cursor is null or e.exerciseId < :cursor)
+      and (:bodyParts is null or e.bodyPart in :bodyParts)
+      and (:difficulties is null or e.difficulty in :difficulties)
+      and lower(function('replace', e.name, ' ', '')) like :likePattern
+    order by e.exerciseId desc
+""")
+    List<ExerciseEntity> findPageWithKeyword(
+            @Param("cursor") Long cursor,
+            @Param("likePattern") String likePattern,
+            @Param("bodyParts") List<String> bodyParts,
+            @Param("difficulties") List<String> difficulties,
+            Pageable pageable
+    );
 }
