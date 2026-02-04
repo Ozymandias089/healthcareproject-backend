@@ -197,10 +197,10 @@ public class MeController {
 
 ## Project Documentation
 
-[//]: # (WIP)
-- **Notion**: https://notion.so/XXXX 
-  - API design & conventions
-  - Sprint / task tracking
+- 기획: [Notion 링크](https://www.notion.so/2ed86ae7d29d819abb0feb29665b07f5)
+- 요구사항 분석: [Google Sheets 링크](https://docs.google.com/spreadsheets/d/1H7atLbovfqtVw2OyD002Y94dBTw3mCqxEZTNq7g5na8/edit?gid=0#gid=0)
+- API 명세서: [Notion 링크](https://www.notion.so/API-2ed86ae7d29d818f8ad1d3ab28d59e9d)
+
 
 ## Contributors
 
