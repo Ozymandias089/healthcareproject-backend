@@ -40,3 +40,4 @@ Language rules:
 - title must be Korean and must not contain English letters (A-Z, a-z)
 - considerations must be Korean and must not contain English letters (A-Z, a-z)
 - amount (if present) must be Korean and must not contain English letters (A-Z, a-z)
+- amount(if present) must contain the number of repetitions and number of sets

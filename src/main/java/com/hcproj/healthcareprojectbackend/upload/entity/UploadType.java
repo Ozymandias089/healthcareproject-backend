@@ -26,6 +26,16 @@ import java.util.Set;
 public enum UploadType {
 
     /**
+     * 운동 목록에 사용될 이미지 업로드
+     */
+    EXERCISE("exercises", Set.of("jpg", "jpeg", "png", "gif", "webp")),
+
+    /**
+     * 음식 목록에 사용될 이미지 업로드
+     */
+    FOOD("foods", Set.of("jpg", "jpeg", "png", "gif", "webp")),
+
+    /**
      * 사용자 프로필 이미지 업로드
      */
     PROFILE("profiles", Set.of("jpg", "jpeg", "png", "gif", "webp")),
