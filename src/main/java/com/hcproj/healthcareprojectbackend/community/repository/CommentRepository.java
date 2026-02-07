@@ -41,4 +41,13 @@ public interface CommentRepository extends JpaRepository<CommentEntity, Long> {
             group by c.postId
             """)
     List<PostCommentCount> countByPostIds(@Param("postIds") List<Long> postIds);
+
+    interface IdUserIdProjection {
+        Long getId();
+        Long getUserId();
+    }
+
+    @Query("select c.commentId as id, c.userId as userId from CommentEntity c where c.commentId in :ids")
+    List<IdUserIdProjection> findIdAndUserIdByIdIn(@Param("ids") List<Long> ids);
+
 }

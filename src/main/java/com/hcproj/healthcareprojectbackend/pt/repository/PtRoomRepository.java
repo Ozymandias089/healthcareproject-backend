@@ -283,4 +283,12 @@ public interface PtRoomRepository extends JpaRepository<PtRoomEntity, Long> {
             @Param("startInclusive") Instant startInclusive,
             @Param("endExclusive") Instant endExclusive
     );
+
+    interface IdTrainerIdProjection {
+        Long getId();
+        Long getTrainerId();
+    }
+
+    @Query("select r.ptRoomId as id, r.trainerId as trainerId from PtRoomEntity r where r.ptRoomId in :ids")
+    List<IdTrainerIdProjection> findIdAndTrainerIdByIdIn(@Param("ids") List<Long> ids);
 }

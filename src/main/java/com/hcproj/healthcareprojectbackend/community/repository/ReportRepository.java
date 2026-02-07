@@ -26,6 +26,10 @@ public interface ReportRepository extends JpaRepository<ReportEntity, Long> {
      * @return 신고 목록
      */
     List<ReportEntity> findAllByStatusOrderByCreatedAtDesc(ReportStatus status);
+    List<ReportEntity> findAllByTypeOrderByCreatedAtDesc(ReportType type);
+    List<ReportEntity> findAllByStatusAndTypeOrderByCreatedAtDesc(ReportStatus status, ReportType type);
+    List<ReportEntity> findAllByOrderByCreatedAtDesc();
+
 
     /**
      * 특정 대상(게시글/댓글)에 대한 신고 목록을 조회한다.
