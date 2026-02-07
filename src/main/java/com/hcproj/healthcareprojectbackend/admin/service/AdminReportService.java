@@ -17,9 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,85 +30,121 @@ public class AdminReportService {
     private final UserRepository userRepository;
     private final PtRoomRepository ptRoomRepository;
 
-    // 1. 신고 목록 조회 (status, type 필터 적용)
     @Transactional(readOnly = true)
     public AdminReportListResponseDTO getReportList(String statusStr, String typeStr) {
-        List<ReportEntity> reports;
+        ReportStatus status = parseEnumOrNull(ReportStatus.class, statusStr);
+        ReportType type = parseEnumOrNull(ReportType.class, typeStr);
 
-        // (1) Status 필터링
-        if (statusStr != null && !statusStr.isBlank()) {
-            try {
-                ReportStatus status = ReportStatus.valueOf(statusStr.toUpperCase());
-                reports = reportRepository.findAllByStatusOrderByCreatedAtDesc(status);
-            } catch (IllegalArgumentException e) {
-                reports = Collections.emptyList();
-            }
-        } else {
-            reports = reportRepository.findAll();
+        // 1) reports: DB에서 필터링/정렬
+        List<ReportEntity> reports = fetchReports(status, type);
+        if (reports.isEmpty()) {
+            return AdminReportListResponseDTO.builder().total(0).list(List.of()).build();
         }
 
-        // (2) Type(POST/COMMENT/PT_ROOM) 필터링
-        if (typeStr != null && !typeStr.isBlank()) {
-            try {
-                ReportType typeFilter = ReportType.valueOf(typeStr.toUpperCase());
-                reports = reports.stream()
-                        .filter(r -> r.getType() == typeFilter)
-                        .toList();
-            } catch (IllegalArgumentException e) {
-                // 타입 값이 이상하면 무시하고 진행
-            }
+        // 2) reporterIds
+        List<Long> reporterIds = reports.stream()
+                .map(ReportEntity::getReporterId)
+                .distinct()
+                .toList();
+
+        // 3) 타입별 targetId 모으기
+        List<Long> postTargetIds = new ArrayList<>();
+        List<Long> commentTargetIds = new ArrayList<>();
+        List<Long> roomTargetIds = new ArrayList<>();
+
+        for (ReportEntity r : reports) {
+            if (r.getType() == ReportType.POST) postTargetIds.add(r.getTargetId());
+            else if (r.getType() == ReportType.COMMENT) commentTargetIds.add(r.getTargetId());
+            else if (r.getType() == ReportType.PT_ROOM) roomTargetIds.add(r.getTargetId());
         }
 
-        // (3) 사용자 정보 조회 (신고자 정보 미리 가져오기)
-        List<Long> reporterIds = reports.stream().map(ReportEntity::getReporterId).distinct().toList();
-        Map<Long, UserEntity> reporterMap = reporterIds.isEmpty() ? Collections.emptyMap() :
-                userRepository.findAllById(reporterIds).stream().collect(Collectors.toMap(UserEntity::getId, u -> u));
+        // 4) targetId -> authorId(trainerId/userId) 매핑 일괄 조회
+        Map<Long, Long> postIdToAuthorId = postTargetIds.isEmpty() ? Map.of()
+                : postRepository.findIdAndUserIdByIdIn(postTargetIds).stream()
+                .collect(Collectors.toMap(
+                        PostRepository.IdUserIdProjection::getId,
+                        PostRepository.IdUserIdProjection::getUserId
+                ));
 
-        // (4) DTO 변환
+        Map<Long, Long> commentIdToAuthorId = commentTargetIds.isEmpty() ? Map.of()
+                : commentRepository.findIdAndUserIdByIdIn(commentTargetIds).stream()
+                .collect(Collectors.toMap(
+                        CommentRepository.IdUserIdProjection::getId,
+                        CommentRepository.IdUserIdProjection::getUserId
+                ));
+
+        Map<Long, Long> roomIdToTrainerId = roomTargetIds.isEmpty() ? Map.of()
+                : ptRoomRepository.findIdAndTrainerIdByIdIn(roomTargetIds).stream()
+                .collect(Collectors.toMap(
+                        PtRoomRepository.IdTrainerIdProjection::getId,
+                        PtRoomRepository.IdTrainerIdProjection::getTrainerId
+                ));
+
+        // 5) reporter + target 작성자 유저를 union 해서 한 번에 조회
+        Set<Long> allUserIds = new HashSet<>(reporterIds);
+        allUserIds.addAll(postIdToAuthorId.values());
+        allUserIds.addAll(commentIdToAuthorId.values());
+        allUserIds.addAll(roomIdToTrainerId.values());
+
+        Map<Long, UserRepository.UserHandleNameProjection> allUsers =
+                allUserIds.isEmpty()
+                        ? Map.of()
+                        : userRepository.findByIdIn(allUserIds).stream()
+                        .collect(Collectors.toMap(
+                                UserRepository.UserHandleNameProjection::getId,
+                                u -> u,
+                                (a, b) -> a
+                        ));
+
+
+        // 6) DTO 변환
         List<AdminReportListResponseDTO.AdminReportItemDTO> list = reports.stream()
-                .map(report -> {
-                    // A. 신고자(Reporter) 정보 가져오기
-                    UserEntity reporter = reporterMap.get(report.getReporterId());
+                .map(r -> {
+                    UserRepository.UserHandleNameProjection reporter = allUsers.get(r.getReporterId());
 
-                    // B. 신고 당한 글/댓글/방의 작성자(Target Author) 찾기
-                    String targetAuthorHandle = "알 수 없음"; // 기본값 (삭제된 경우 등)
+                    String reporterHandle = reporter != null ? reporter.getHandle() : "알 수 없음";
+                    String reporterName   = reporter != null ? reporter.getNickname() : "알 수 없음";
 
-                    if (report.getType() == ReportType.POST) {
-                        // 게시글 조회 -> 작성자 ID 확인 -> 유저 닉네임 조회
-                        targetAuthorHandle = postRepository.findById(report.getTargetId())
-                                .flatMap(post -> userRepository.findById(post.getUserId()))
-                                .map(UserEntity::getNickname)
-                                .orElse("삭제된 게시글");
-                    }
-                    else if (report.getType() == ReportType.COMMENT) {
-                        // 댓글 조회 -> 작성자 ID 확인 -> 유저 닉네임 조회
-                        targetAuthorHandle = commentRepository.findById(report.getTargetId())
-                                .flatMap(comment -> userRepository.findById(comment.getUserId()))
-                                .map(UserEntity::getNickname)
-                                .orElse("삭제된 댓글");
-                    }
-                    else if (report.getType() == ReportType.PT_ROOM) {
-                        // 화상 PT 트레이너 찾기
-                        targetAuthorHandle = ptRoomRepository.findById(report.getTargetId())
-                                .flatMap(room -> userRepository.findById(room.getTrainerId()))
-                                .map(UserEntity::getNickname)
-                                .orElse("삭제/종료된 방");
+                    String targetHandle = "알 수 없음";
+                    String targetName   = "알 수 없음";
+
+                    Long authorId = null;
+                    if (r.getType() == ReportType.POST) authorId = postIdToAuthorId.get(r.getTargetId());
+                    else if (r.getType() == ReportType.COMMENT) authorId = commentIdToAuthorId.get(r.getTargetId());
+                    else if (r.getType() == ReportType.PT_ROOM) authorId = roomIdToTrainerId.get(r.getTargetId());
+
+                    if (authorId != null) {
+                        UserRepository.UserHandleNameProjection target = allUsers.get(authorId);
+                        if (target != null) {
+                            targetHandle = target.getHandle();
+                            targetName   = target.getNickname();
+                        }
+                    } else {
+                        if (r.getType() == ReportType.POST) targetName = "삭제된 게시글";
+                        else if (r.getType() == ReportType.COMMENT) targetName = "삭제된 댓글";
+                        else if (r.getType() == ReportType.PT_ROOM) targetName = "삭제/종료된 방";
                     }
 
                     return AdminReportListResponseDTO.AdminReportItemDTO.builder()
-                            .reportId(report.getReportId())
-                            .reporterHandle(reporter != null ? reporter.getNickname() : "알 수 없음")
-                            .targetAuthorHandle(targetAuthorHandle)
-                            .type(report.getType())
-                            .targetId(report.getTargetId())
-                            .reason(report.getReason())
-                            .status(report.getStatus())
-                            .createdAt(report.getCreatedAt())
+                            .reportId(r.getReportId())
+                            .reporterHandle(reporterHandle)
+                            .reporterName(reporterName)
+                            .targetAuthorHandle(targetHandle)
+                            .targetAuthorName(targetName)
+                            .type(r.getType())
+                            .targetId(r.getTargetId())
+                            .reason(r.getReason())
+                            .status(r.getStatus())
+                            .createdAt(r.getCreatedAt())
                             .build();
                 })
                 .toList();
 
-        return AdminReportListResponseDTO.builder().total(list.size()).list(list).build();
+
+        return AdminReportListResponseDTO.builder()
+                .total(list.size())
+                .list(list)
+                .build();
     }
 
     // 2. 신고 상태 변경 및 후속 처리
@@ -179,16 +213,10 @@ public class AdminReportService {
             }
         }
         else if (currentReport.getType() == ReportType.COMMENT) {
-            CommentEntity comment = commentRepository.findById(currentReport.getTargetId()).orElse(null);
-            if (comment != null) {
-                comment.delete();
-            }
+            commentRepository.findById(currentReport.getTargetId()).ifPresent(CommentEntity::delete);
         }
         else if (currentReport.getType() == ReportType.PT_ROOM) {
-            PtRoomEntity room = ptRoomRepository.findById(currentReport.getTargetId()).orElse(null);
-            if (room != null) {
-                room.forceClose(); // 강제 종료 및 삭제 처리
-            }
+            ptRoomRepository.findById(currentReport.getTargetId()).ifPresent(PtRoomEntity::forceClose);
         }
 
         // 연관된 다른 신고들도 일괄 처리 (같은 타겟에 대한 중복 신고들)
@@ -200,6 +228,28 @@ public class AdminReportService {
             if (related.getStatus() != ReportStatus.PROCESSED) {
                 related.process();
             }
+        }
+    }
+
+    private List<ReportEntity> fetchReports(ReportStatus status, ReportType type) {
+        if (status != null && type != null) {
+            return reportRepository.findAllByStatusAndTypeOrderByCreatedAtDesc(status, type);
+        }
+        if (status != null) {
+            return reportRepository.findAllByStatusOrderByCreatedAtDesc(status);
+        }
+        if (type != null) {
+            return reportRepository.findAllByTypeOrderByCreatedAtDesc(type);
+        }
+        return reportRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    private static <E extends Enum<E>> E parseEnumOrNull(Class<E> enumType, String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Enum.valueOf(enumType, value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 }

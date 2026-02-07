@@ -178,4 +178,13 @@ public interface PostRepository extends JpaRepository<PostEntity, Long> {
             @Param("status") String status,
             @Param("keyword") String keyword
     );
+
+    interface IdUserIdProjection {
+        Long getId();
+        Long getUserId();
+    }
+
+    @Query("select p.postId as id, p.userId as userId from PostEntity p where p.postId in :ids")
+    List<IdUserIdProjection> findIdAndUserIdByIdIn(@Param("ids") List<Long> ids);
+
 }

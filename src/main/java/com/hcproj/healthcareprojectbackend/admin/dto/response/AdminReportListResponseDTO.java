@@ -16,7 +16,9 @@ public record AdminReportListResponseDTO(
     public record AdminReportItemDTO(
             Long reportId,
             String reporterHandle,      // 신고자
+            String reporterName,
             String targetAuthorHandle,  // 신고 당한 사람
+            String targetAuthorName,
             ReportType type,
             Long targetId,
             String reason,
