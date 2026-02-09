@@ -42,74 +42,71 @@ public class DietDayService {
      * @return 식단 응답 DTO
      */
     public DietDayResponseDTO getDietDayByDate(Long userId, LocalDate date) {
-        // 1. diet_days 조회 (user_id + log_date)
-        DietDayEntity dietDay = dietDayRepository.findByUserIdAndLogDate(userId, date)
-                .orElseThrow(() -> new BusinessException(ErrorCode.DIET_DAY_NOT_FOUND));
+        return dietDayRepository.findByUserIdAndLogDate(userId, date)
+                .map(dietDay -> {
+                    List<DietMealEntity> meals =
+                            dietMealRepository.findAllByDietDayIdOrderBySortOrderAsc(dietDay.getDietDayId());
 
-        // 2. diet_meals 조회 (sort_order ASC)
-        List<DietMealEntity> meals = dietMealRepository
-                .findAllByDietDayIdOrderBySortOrderAsc(dietDay.getDietDayId());
+                    List<Long> mealIds = meals.stream().map(DietMealEntity::getDietMealId).toList();
 
-        // 3. 모든 meal_id 추출
-        List<Long> mealIds = meals.stream()
-                .map(DietMealEntity::getDietMealId)
-                .toList();
+                    List<DietMealItemEntity> allItems = mealIds.isEmpty()
+                            ? List.of()
+                            : dietMealItemRepository.findAllByDietMealIdIn(mealIds);
 
-        // 4. diet_meal_items 일괄 조회 (N+1 방지)
-        List<DietMealItemEntity> allItems = dietMealItemRepository.findAllByDietMealIdIn(mealIds);
+                    List<Long> foodIds = allItems.stream()
+                            .map(DietMealItemEntity::getFoodId)
+                            .distinct()
+                            .toList();
 
-        // 5. food_id 추출 → foods 일괄 조회
-        List<Long> foodIds = allItems.stream()
-                .map(DietMealItemEntity::getFoodId)
-                .distinct()
-                .toList();
+                    Map<Long, FoodEntity> foodMap = foodIds.isEmpty()
+                            ? Map.of()
+                            : foodRepository.findAllById(foodIds).stream()
+                            .collect(Collectors.toMap(FoodEntity::getFoodId, f -> f));
 
-        Map<Long, FoodEntity> foodMap = foodRepository.findAllById(foodIds)
-                .stream()
-                .collect(Collectors.toMap(FoodEntity::getFoodId, f -> f));
+                    Map<Long, List<DietMealItemEntity>> itemsByMealId = allItems.stream()
+                            .collect(Collectors.groupingBy(DietMealItemEntity::getDietMealId));
 
-        // 6. meal_id별 items 그룹핑
-        Map<Long, List<DietMealItemEntity>> itemsByMealId = allItems.stream()
-                .collect(Collectors.groupingBy(DietMealItemEntity::getDietMealId));
+                    List<DietDayResponseDTO.MealDTO> mealDTOs = meals.stream()
+                            .map(meal -> {
+                                List<DietMealItemEntity> mealItems =
+                                        itemsByMealId.getOrDefault(meal.getDietMealId(), List.of());
 
-        // 7. meals 변환
-        List<DietDayResponseDTO.MealDTO> mealDTOs = meals.stream()
-                .map(meal -> {
-                    List<DietMealItemEntity> mealItems = itemsByMealId.getOrDefault(
-                            meal.getDietMealId(), List.of()
-                    );
+                                List<DietDayResponseDTO.MealItemDTO> itemDTOs = mealItems.stream()
+                                        .map(item -> {
+                                            FoodEntity food = foodMap.get(item.getFoodId());
+                                            return DietDayResponseDTO.MealItemDTO.builder()
+                                                    .dietMealItemId(item.getDietMealItemId())
+                                                    .foodId(item.getFoodId())
+                                                    .name(food != null ? food.getName() : "알 수 없는 음식")
+                                                    .calories(food != null ? food.getCalories() : 0)
+                                                    .carbs(food != null ? food.getCarbs() : null)
+                                                    .proteins(food != null ? food.getProtein() : null)
+                                                    .fats(food != null ? food.getFat() : null)
+                                                    .isChecked(food != null && Boolean.TRUE.equals(item.getIsChecked()))
+                                                    .build();
+                                        })
+                                        .toList();
 
-                    List<DietDayResponseDTO.MealItemDTO> itemDTOs = mealItems.stream()
-                            .map(item -> {
-                                FoodEntity food = foodMap.get(item.getFoodId());
-                                return DietDayResponseDTO.MealItemDTO.builder()
-                                        .dietMealItemId(item.getDietMealItemId())
-                                        .foodId(item.getFoodId())
-                                        .name(food != null ? food.getName() : "알 수 없는 음식")
-                                        .calories(food != null ? food.getCalories() : 0)
-                                        .carbs(food != null ? food.getCarbs() : null)
-                                        .proteins(food != null ? food.getProtein() : null)
-                                        .fats(food != null ? food.getFat() : null)
-                                        .isChecked(food != null ? item.getIsChecked() : false)
+                                return DietDayResponseDTO.MealDTO.builder()
+                                        .dietMealId(meal.getDietMealId())
+                                        .title(meal.getTitle())
+                                        .sortOrder(meal.getSortOrder())
+                                        .items(itemDTOs)
                                         .build();
                             })
                             .toList();
 
-                    return DietDayResponseDTO.MealDTO.builder()
-                            .dietMealId(meal.getDietMealId())
-                            .title(meal.getTitle())
-                            .sortOrder(meal.getSortOrder())
-                            .items(itemDTOs)
+                    return DietDayResponseDTO.builder()
+                            .date(date.toString())
+                            .dietDayId(dietDay.getDietDayId())
+                            .meals(mealDTOs)
                             .build();
                 })
-                .toList();
-
-        // 8. 응답 DTO 생성
-        return DietDayResponseDTO.builder()
-                .date(date.toString())
-                .dietDayId(dietDay.getDietDayId())
-                .meals(mealDTOs)
-                .build();
+                .orElseGet(() -> DietDayResponseDTO.builder()
+                        .date(date.toString())
+                        .dietDayId(null)          // 없으면 null
+                        .meals(List.of())         // 빈 리스트
+                        .build());
     }
     /**
      * 식단 항목 체크 상태 업데이트
